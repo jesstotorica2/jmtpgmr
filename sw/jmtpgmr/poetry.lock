@@ -1,0 +1,153 @@
+[[package]]
+name = "click"
+version = "8.0.3"
+description = "Composable command line interface toolkit"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+colorama = {version = "*", markers = "platform_system == \"Windows\""}
+importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
+
+[[package]]
+name = "colorama"
+version = "0.4.4"
+description = "Cross-platform colored terminal text."
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+
+[[package]]
+name = "importlib-metadata"
+version = "4.8.1"
+description = "Read metadata from Python packages"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+typing-extensions = {version = ">=3.6.4", markers = "python_version < \"3.8\""}
+zipp = ">=0.5"
+
+[package.extras]
+docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
+perf = ["ipython"]
+testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "packaging", "pep517", "pyfakefs", "flufl.flake8", "pytest-perf (>=0.9.2)", "pytest-black (>=0.3.7)", "pytest-mypy", "importlib-resources (>=1.3)"]
+
+[[package]]
+name = "pybluez"
+version = "0.23"
+description = "Bluetooth Python extension module"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+pyobjc-core = ">=3.1,<6"
+pyobjc-framework-Cocoa = ">=3.1,<6"
+
+[package.extras]
+ble = ["gattlib (==0.20150805)"]
+
+[[package]]
+name = "pyobjc-core"
+version = "5.3"
+description = "Python<->ObjC Interoperability Module"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "pyobjc-framework-cocoa"
+version = "5.3"
+description = "Wrappers for the Cocoa frameworks on macOS"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+pyobjc-core = ">=5.3"
+
+[[package]]
+name = "typing-extensions"
+version = "3.10.0.2"
+description = "Backported and Experimental Type Hints for Python 3.5+"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "zipp"
+version = "3.6.0"
+description = "Backport of pathlib-compatible object wrapper for zip files"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.extras]
+docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
+testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
+
+[metadata]
+lock-version = "1.1"
+python-versions = "^3.7"
+content-hash = "c716fd8b1df068e36e6ce5d25eafffabd3d58f496b6ec3577299f8a22209e581"
+
+[metadata.files]
+click = [
+    {file = "click-8.0.3-py3-none-any.whl", hash = "sha256:353f466495adaeb40b6b5f592f9f91cb22372351c84caeb068132442a4518ef3"},
+    {file = "click-8.0.3.tar.gz", hash = "sha256:410e932b050f5eed773c4cda94de75971c89cdb3155a72a0831139a79e5ecb5b"},
+]
+colorama = [
+    {file = "colorama-0.4.4-py2.py3-none-any.whl", hash = "sha256:9f47eda37229f68eee03b24b9748937c7dc3868f906e8ba69fbcbdd3bc5dc3e2"},
+    {file = "colorama-0.4.4.tar.gz", hash = "sha256:5941b2b48a20143d2267e95b1c2a7603ce057ee39fd88e7329b0c292aa16869b"},
+]
+importlib-metadata = [
+    {file = "importlib_metadata-4.8.1-py3-none-any.whl", hash = "sha256:b618b6d2d5ffa2f16add5697cf57a46c76a56229b0ed1c438322e4e95645bd15"},
+    {file = "importlib_metadata-4.8.1.tar.gz", hash = "sha256:f284b3e11256ad1e5d03ab86bb2ccd6f5339688ff17a4d797a0fe7df326f23b1"},
+]
+pybluez = [
+    {file = "PyBluez-0.23-cp27-cp27m-macosx_10_13_x86_64.whl", hash = "sha256:7fe58ee9e53bc171d70907f5c5d3e47bc9ca4c0643dd7ca0f43ed388c916f3d4"},
+    {file = "PyBluez-0.23-cp27-cp27m-win_amd64.whl", hash = "sha256:92abf92965261093e88c9d39353f3fc4d2997f5c9bd8c19fc23b1beb91e40e17"},
+    {file = "PyBluez-0.23-cp35-cp35m-macosx_10_13_x86_64.whl", hash = "sha256:46a0c4cb39fb84c235ae7442363562575d11d7cca61b77ef035d832d15824bdd"},
+    {file = "PyBluez-0.23-cp35-cp35m-win_amd64.whl", hash = "sha256:493d8a184433efbe7965420b6933bca37d3cacdcd168905c56d3459a8c4a5834"},
+    {file = "PyBluez-0.23-cp36-cp36m-macosx_10_13_x86_64.whl", hash = "sha256:87499a2ebbd3a3a7d2e1b3286a4cdf05a5c8a51eb2a0503c51f7698334f44412"},
+    {file = "PyBluez-0.23-cp36-cp36m-win_amd64.whl", hash = "sha256:319dab31a15d10e4797a618deed5bafc3b1c074b3a9b6270d780b3ea7ed472d5"},
+    {file = "PyBluez-0.23-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:22f5963e2ad6dfb7dddadb39ab29c3863bcd5335fbf324af948a2811c43f2455"},
+    {file = "PyBluez-0.23-cp37-cp37m-win_amd64.whl", hash = "sha256:578a2651fb48484cecd3e67c089daa53950223b5c0ee29113ff8900e49422aec"},
+    {file = "PyBluez-0.23.tar.gz", hash = "sha256:c8f04d2e78951eaa9de486b4d49381704e8943d0a6e6e58f55fcd7b8582e90de"},
+]
+pyobjc-core = [
+    {file = "pyobjc-core-5.3.tar.gz", hash = "sha256:07554c7fb02a980a2a648f567441cd0bf031a15a7afe284cda197bd4d8b443e3"},
+    {file = "pyobjc_core-5.3-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:b96a79e04f88cb6920ff3c5d067d44dc28102daab0b34ff4e6f8c498af5e3f80"},
+    {file = "pyobjc_core-5.3-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:5b5d9d7e8c5d11b1efff84daf5f24d5e10c235f3dc66c7948b978e8ef277f2ca"},
+    {file = "pyobjc_core-5.3-cp34-cp34m-macosx_10_6_intel.whl", hash = "sha256:c6abe99229cd4fde824651e36f1d9cfbd6054f537db97b507e1e2c55b9dbb3aa"},
+    {file = "pyobjc_core-5.3-cp35-cp35m-macosx_10_6_intel.whl", hash = "sha256:c35069cca043e2941cda65220b854002e6db91cd2b2f96c6259d0eac558a96e1"},
+    {file = "pyobjc_core-5.3-cp36-cp36m-macosx_10_6_intel.whl", hash = "sha256:c7a8941fb9ef200d8f63370cf7b20f63cc4a6d2a9c37d7ea33d1c358c4ec5fe4"},
+    {file = "pyobjc_core-5.3-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:00f4e9526036d33f4b4c770dee76a4f26756e5f79e586be8a05bbe1d9ff312ec"},
+    {file = "pyobjc_core-5.3-cp37-cp37m-macosx_10_6_intel.whl", hash = "sha256:bd2fa9f241f7a6745adf5f0b3d5de0fbdfd377bf384950921d3c5f6b1d440545"},
+    {file = "pyobjc_core-5.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:e35a397935ced28df5decb4ce080ffb64252eddeda757a55c53a39326c9c5147"},
+    {file = "pyobjc_core-5.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:2a32cf7f2285d9dc4785ea48a7f482a71ad4e7d161fd95bf5e58e9305a69cf09"},
+]
+pyobjc-framework-cocoa = [
+    {file = "pyobjc-framework-Cocoa-5.3.tar.gz", hash = "sha256:0b2d2f4a95d2634d1545c2d5cc949cb1b1bbfd73393d3c3b483be2a18906e568"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:162e54d3fc06144de3ae244b53d3c2fe27fc99c80923f2ad6f4c884de7f4624b"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:4a87394366e969d72ac1eb3fef69555a4bb7bfcfc6e6d35cdf014b07997e29bc"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp34-cp34m-macosx_10_6_intel.whl", hash = "sha256:5d809f2868ad1e3552cf6ddd82e6299f3927c33047969d0eab93344d2c892c5f"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp35-cp35m-macosx_10_6_intel.whl", hash = "sha256:ae070efea17e62cdf6e9ca90924ffe02bf85e5437eb860ca4739873bc5162020"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp36-cp36m-macosx_10_6_intel.whl", hash = "sha256:fe1831a2f5b9970522ab958bb3d91da4d522142213d825e8f04e427f782d63be"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:38739b4fd0adeaf20ca243b4602bc8212211267d42f75b977ad16cfd9ac9751c"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp37-cp37m-macosx_10_6_intel.whl", hash = "sha256:ef4fea8d83252dbd23bfe5322eec52f7be491f733c34c6b18763157104908e1d"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:6cc5496e5556c848ca3ab3eeba3b66481d91f53a9a49fd068dadbe87c9e3ca68"},
+    {file = "pyobjc_framework_Cocoa-5.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:0a28b167c7cec5af0323166a08c8e7914da83f2205be14eb3bd9eb6c9fa69dc6"},
+]
+typing-extensions = [
+    {file = "typing_extensions-3.10.0.2-py2-none-any.whl", hash = "sha256:d8226d10bc02a29bcc81df19a26e56a9647f8b0a6d4a83924139f4a8b01f17b7"},
+    {file = "typing_extensions-3.10.0.2-py3-none-any.whl", hash = "sha256:f1d25edafde516b146ecd0613dabcc61409817af4766fbbcfb8d1ad4ec441a34"},
+    {file = "typing_extensions-3.10.0.2.tar.gz", hash = "sha256:49f75d16ff11f1cd258e1b988ccff82a3ca5570217d7ad8c5f48205dd99a677e"},
+]
+zipp = [
+    {file = "zipp-3.6.0-py3-none-any.whl", hash = "sha256:9fe5ea21568a0a70e50f273397638d39b03353731e6cbbb3fd8502a33fec40bc"},
+    {file = "zipp-3.6.0.tar.gz", hash = "sha256:71c644c5369f4a6e07636f0aa966270449561fcea2e3d6747b8d23efaa9d7832"},
+]
