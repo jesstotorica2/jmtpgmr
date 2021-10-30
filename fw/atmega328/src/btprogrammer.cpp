@@ -27,9 +27,9 @@ char 									rbuf[RBUF_SIZE];
 int main() {
 	int 	cmd;
 	char* cmd_args;
-	
 	//_delay_ms(5000);
 	sys_init();
+	//uart.print("cmd_args addr: "); uart.printnum((uint16_t)&cmd_args); uart.print("\r\n"); //DEBUG!!!!!!
 	wait_connect();
 /*
 //speed test
@@ -55,7 +55,7 @@ int main() {
 		// Wait for command
 		cmd = get_cmd(&cmd_args);	
 		run_cmd(cmd, cmd_args);
-	
+		
 	}
 
 	return 0;
@@ -101,7 +101,7 @@ void wait_connect()
 
 	// Clear the buffer string
 	rbuf[0] = '\0';
-	uart.print("rbuf before waiting: |"); uart.print(rbuf); uart.print("|\r\n");
+	//uart.print("rbuf before waiting: |"); uart.print(rbuf); uart.print("|\r\n"); //DEBUG!!!!!!!!!!!!!!!!
 	while( !connected ) 
 	{
 		// Wait for device to send an 'OK' after connection
@@ -117,16 +117,18 @@ void wait_connect()
 //
 //	get_cmd()
 //
-//
+//	Waits for data from bluetoot module, then parses data and enumerates
+//	to a known command (or error)
 int get_cmd(char** args)
 {	
 	char* cmd = nullptr;
 	char* cmd_end = nullptr;
-
+	//uart.print("cmd_args addr in get: "); uart.printnum((uint16_t)args); uart.print("\r\n"); //DEBUG!!!!!!
+	
 	// Clear the buffer string
 	rbuf[0] = '\0';
 
-	tmr0.start(); // DEBUG!!!!!!!!
+	//tmr0.start(); // DEBUG!!!!!!!!
 	// Listen to BT module, record if there is a timeout
 	bt_listen_to = !bt.listen(rbuf, RBUF_SIZE, "\r\n", BT_CMD_LISTEN_TIMEOUT);
 	cmd = strstr(rbuf,"JMT+");
@@ -140,13 +142,19 @@ int get_cmd(char** args)
 	// Additional args
 	(*args) = nullptr;
 
+	//uart.print("rbuf: "); uart.printnum((int)(rbuf));uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
+	//uart.print("cmd: "); uart.printnum((int)(cmd-rbuf));uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
+	//uart.print("has '=' "); uart.printnum( (int)strstr(cmd, "="    ) ); uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
 	// Find command end
-	if(  			(cmd_end = strstr(cmd, "=" 		)) != nullptr )	(*args) = (cmd_end + 1);
+	//if(  			(cmd_end = strstr(cmd, "=" 		)) != nullptr ){	*args = (cmd_end + 1); uart.print("args: "); uart.printnum((unsigned int)(*args));uart.print("\r\n"); //DEBUG!!!!!!!!!!!!!!}
+	//uart.print("cmd_end: "); uart.printnum((int)(cmd_end));uart.print("\r\n");}//DEBUG!!!!!!!!!!!!!!
+	if(  			(cmd_end = strstr(cmd, "=" 		)) != nullptr )	*args = (cmd_end + 1);
 	else if(  (cmd_end = strstr(cmd, "?" 		)) != nullptr );
 	else if(  (cmd_end = strstr(cmd, "\r\n" )) != nullptr );
 	else
 		return JMT_ERROR;
-
+	//uart.print("cmd_end: "); uart.printnum((int)(cmd_end));uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
+	//uart.print("args: "); uart.printnum((unsigned int)(*args));uart.print("\r\n"); //DEBUG!!!!!!!!!!!!!!
 
 	if( substrcmp(cmd, cmd_end, "PGM") ) 		return JMT_PGM;
 	if( substrcmp(cmd, cmd_end, "FLASH") ) 	return JMT_FLASH;
@@ -166,7 +174,7 @@ int get_cmd(char** args)
 void run_cmd(int cmd, char* args)
 {	
 	int vals[3], num_vals;
-	
+	//if(cmd == JMT_PGM) {uart.print("args addr: "); uart.printnum((int)(args);uart.print("\r\n");uart.print("PGM args |"); uart.print(args); uart.print("|\r\n");} //DEBUG!!!!!!!
 	// Get any trailing argument values ( =a,b,c,... )
 	fill_arg_vals(vals, &num_vals, &args, 3);
 	
@@ -174,8 +182,8 @@ void run_cmd(int cmd, char* args)
 	{
 		
 		case JMT_PGM :
-//			if( num_vals != 2 )  	print_err(JMT_PGM_INVALID_ARGS); // err
-			if( num_vals != 2 ){  	print_err(JMT_PGM_INVALID_ARGS); uart.print("\r\n|");uart.print(rbuf);uart.print("|\r\n"); }// err
+			if( num_vals != 2 )  	print_err(JMT_PGM_INVALID_ARGS); // err
+//			if( num_vals != 2 ){  	print_err(JMT_PGM_INVALID_ARGS); uart.print("\r\n|");uart.print(rbuf);uart.print("|\r\n"); uart.print("num_vals= "); uart.printnum(num_vals); uart.print("\r\n");}//DEBUG!!!!!!!!!!!!!!!!!
 			else									jmt_pgm(vals[0],vals[1]);
 			break;
 		
@@ -210,10 +218,10 @@ void run_cmd(int cmd, char* args)
 				bt_listen_to = false;
 			}
 			// BT listen timeout
-			else if( bt_listen_to ){uart.print("bt tout\r\n");}
+			else if( bt_listen_to );//{uart.print("bt tout\r\n");}
 			else
 			{
-				uart.print("in err with |"); uart.print(rbuf); uart.print("|\r\n");
+				//uart.print("in err with |"); uart.print(rbuf); uart.print("|\r\n");
 				print_err(JMT_INVALID_CMD);	//err
 			}
 			//uart.print("exiting err\r\n");
@@ -296,7 +304,7 @@ void jmt_pgm(int pkt_size, int verify){
 	{
 		// Wait for flash cmd
 		wr_cmd = get_cmd(&args);
-		uart.printnum(tmr0.read()); uart.print(" ms\r\n");//DEBUG!!!!!
+		//uart.printnum(tmr0.read()); uart.print(" ms\r\n");//DEBUG!!!!!
 		run_cmd(wr_cmd, args);
 		if(wr_cmd == JMT_ERROR)
 		{
@@ -323,14 +331,14 @@ void jmt_flash(int stream_blen){
 	else if( stream_blen > MAX_PKT_SIZE ) print_err(JMT_FLASH_EXCEEDS_MAX_PKTSIZE);
 	else { // Valid bytelength
 		print_succ("BSTRM READY");
-		uart.printnum(tmr0.read()); uart.print(" ms\r\n");//DEBUG!!!!!
+		//uart.print("Ready resp sent: "); uart.printnum(tmr0.read()); uart.print(" ms\r\n");//DEBUG!!!!!
 
 		//bt.debug=true; //DEBUG
 		// Wait for bytestream
-		bt_listen_to = !bt.listen(rbuf, stream_blen, nullptr, BT_CMD_LISTEN_TIMEOUT);
-		
-		//DEBUG
-		//tmr0.start();
+		//debug = 1; //DEBUG!!!!!!!!
+		bt_listen_to = !bt.listen(rbuf, stream_blen, nullptr);//, BT_CMD_LISTEN_TIMEOUT);
+		//uart.print("Flash data recieved: "); uart.printnum(tmr0.read()); uart.print(" ms\r\n");//DEBUG!!!!!
+			
 		
 		// Iterate through sections
 		for( int bidx = 0; bidx < stream_blen; ) {
@@ -363,6 +371,7 @@ void jmt_flash(int stream_blen){
 		}
 			
 		print_succ();	
+		//uart.print("Flash done: "); uart.printnum(tmr0.read()); uart.print(" ms\r\n");//DEBUG!!!!!
 	}
 }
 

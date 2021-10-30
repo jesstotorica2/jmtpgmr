@@ -25,7 +25,7 @@ hex: dirs
 	$(CC) $(CFLAGS) $(OBJ_FILES) -o $(IMG_DIR)/$(TARGET).bin $(SRC_FILES)
 	$(OBJCOPY) -j .text -j .data -O ihex $(IMG_DIR)/$(TARGET).bin $(IMG_DIR)/$(TARGET).hex
 
-# Dirs
+# Create image directory
 dirs:
 	@mkdir -p $(IMG_DIR)
 
@@ -34,7 +34,7 @@ hex_debug:
 	${OBJCOPY} -j .text -j .data -O ihex ${TARGET}.bin ${TARGET}.hex 
 
 flash:
-	/Applications/Arduino.app/Contents/Java/hardware/tools/avr/bin/avrdude -C/Applications/Arduino.app/Contents/Java/hardware/tools/avr/etc/avrdude.conf -v -patmega328p -carduino -P/dev/cu.usbmodem14201 -b115200 -D -Uflash:w:$(TARGET).hex:i 
+	/Applications/Arduino.app/Contents/Java/hardware/tools/avr/bin/avrdude -C/Applications/Arduino.app/Contents/Java/hardware/tools/avr/etc/avrdude.conf -v -patmega328p -carduino -P/dev/cu.usbmodem14201 -b115200 -D -Uflash:w:$(IMG_DIR)/$(TARGET).hex:i 
 
 
 clean:

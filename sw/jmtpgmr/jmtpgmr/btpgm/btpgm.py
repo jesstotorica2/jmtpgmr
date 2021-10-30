@@ -45,6 +45,7 @@ class BTprogrammer:
       pass #TODO make warning
   
     # Create bluetooth socket
+    self.err_h = jmtpgmrerr()    
     self.btsock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
   
 
@@ -143,28 +144,28 @@ class BTprogrammer:
       flash_cmd = "FLASH={blen}\r\n".format(blen=blk.byte_count) 
       
       # DEBUG{
-      sent_t = time.time()
+      #sent_t = time.time()
       # }DEBUG
       # Send Command 
       self._send_cmd(flash_cmd, success_resp)
       # DEBUG{
-      print("\nFlash cmd total time: {} ms".format(round((time.time() - sent_t),2)))
-      sent_t = time.time()
+      #print("\nFlash cmd total time: {} ms".format(round((time.time() - sent_t),2)))
+      #sent_t = time.time()
       # }DEBUG
 
       # Send Bytestream
       # DEBUG{
-      sent_t = time.time()
+      #sent_t = time.time()
       # }DEBUG
       if( self._send(blk.bytestream) ):
         # DEBUG{
-        print("Time to send: {} ms".format(round((time.time() - sent_t),2)))
-        sent_t = time.time()
+        #print("Time to send: {} ms".format(round((time.time() - sent_t),2)))
+        #sent_t = time.time()
         # }DEBUG
         resp = self._get_resp()
         # DEBUG{
-        print("Data sent->Got resp time: {} ms".format(round((time.time() - sent_t),2)))
-        sent_t = time.time()
+        #print("Data sent->Got resp time: {} ms".format(round((time.time() - sent_t),2)))
+        #sent_t = time.time()
         # }DEBUG
         if( self.debug ):
           print("Bytestream block write time: {} ms".format(round((time.time() - st_time),2)))
@@ -172,16 +173,16 @@ class BTprogrammer:
         self._btpgm_exit("Failed to send byte stream data through BT socket.")
     
       if( success_resp not in resp ):
-        if( jmtpgmrerr.is_err_resp(resp) ):
-          err_val = jmtpgmrerr.parse_err_val(resp)
-          self._btpgm_exit(jmtpgmrerr.get_err_str(err_val))
+        if( self.err_h.is_err_resp(resp) ):
+          err_val = self.err_h.parse_err_val(resp)
+          self._btpgm_exit(self.err_h.get_err_str(err_val))
         else:
           self._btpgm_exit( "Unexpected response during bytestream flash:\r\n{}".format(self._format_resp(resp)) )
       else:
         bytes_flashed += blk.dbyte_count
         print(self._percent_bar((100*bytes_flashed/self.pgm_size)), end="")
       # DEBUG{
-      print("time till end of loop: {} ms".format(round((time.time() - sent_t),2)))
+      #print("time till end of loop: {} ms".format(round((time.time() - sent_t),2)))
       # }DEBUG
     self._print_green("\nWrite Done!")  
     print("Write time: {} s".format(round(time.time() - st_time, 3)))
@@ -319,19 +320,19 @@ class BTprogrammer:
     resp = ""
     # Send cmd
     # DEBUG{
-    sent_t = time.time()
+    #sent_t = time.time()
     # }DEBUG
     if( self._send("JMT+"+cmd) ):
       # DEBUG{
-      if( "FLASH" in cmd ):
-        print("\nFlash send time: {} ms".format(round((time.time() - sent_t),2)))
-        sent_t = time.time()
+      #if( "FLASH" in cmd ):
+      #  print("\nFlash send time: {} ms".format(round((time.time() - sent_t),2)))
+      #  sent_t = time.time()
       # }DEBUG
       resp = self._get_resp()
       # DEBUG{
-      if( "FLASH" in cmd ):
-        print("\nFlash resp time: {} ms".format(round((time.time() - sent_t),2)))
-        sent_t = time.time()
+      #if( "FLASH" in cmd ):
+      #  print("\nFlash resp time: {} ms".format(round((time.time() - sent_t),2)))
+      #  sent_t = time.time()
       # }DEBUG
     else:
       self._btpgm_exit("Failed to send data through BT socket.")
@@ -339,9 +340,9 @@ class BTprogrammer:
     # Check response
     if( success_resp in resp ):
       return resp
-    elif( jmtpgmrerr.is_err_resp(resp) ):
-      err_val = jmtpgmrerr.parse_err_val(resp)
-      self._btpgm_exit(jmtpgmrerr.get_err_str(err_val))
+    elif( self.err_h.is_err_resp(resp) ):
+      err_val = self.err_h.parse_err_val(resp)
+      self._btpgm_exit(self.err_h.get_err_str(err_val))
     else:
       self._btpgm_exit("Unrecognized response from programmer:\r\n{}".format(self._format_resp(resp)))
 

@@ -4,7 +4,7 @@
 
 	Macros and prototypes for btprogrammer
 */
-
+extern int debug;
 // Includes
 #include "mystdlib.h"
 #include "myUART.h"
