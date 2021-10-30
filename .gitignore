@@ -1,6 +1,6 @@
 *.o
 *.bin
 *.hex
-./bin/jmtpgmr
+*bin/jmtpgmr
 *.swp
 *.pyc
