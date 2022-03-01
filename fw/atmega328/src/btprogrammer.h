@@ -17,6 +17,7 @@ extern int debug;
 
 //==============================
 // Macros
+#define MY_SPI_STC_ISR 1
 
 // HC-05
 #define BT_BAUD_RATE 						115200

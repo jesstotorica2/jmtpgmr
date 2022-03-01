@@ -76,6 +76,7 @@ void sys_init()
 {
 	uart.init( BT_BAUD_RATE, 8, 1, 0 );
 	spi.init( SPI_MST, SPI_DIV4, 0x0 );
+	spi.set_highz();
 	if( !bt.init( &uart, &tmr0, BT_EN_PIN, BT_BAUD_RATE ) )
 	{
 		while(1)
@@ -276,6 +277,7 @@ void print_err(int err)
 void jmt_pgm(int pkt_size, int verify){
 	int wr_cmd;
 	char* args;
+	spi.set_mst();
 
 	// Check pkt size 
 	if( pkt_size > (RBUF_SIZE+64)) {
@@ -313,7 +315,7 @@ void jmt_pgm(int pkt_size, int verify){
 	}
 
 	if( err_cnt >= 3 ) pgmr.endProgrammingMode(); // If exited on programming errors
-
+	spi.set_highz();
 }
 
 
@@ -486,9 +488,11 @@ void jmt_echo(int begin) {
 	} 
 }
 
+//
 //**** JMT_ECHO SPI Interrupt *****
-void _MY_SPI_ISR_() {
-	
+//
+void MY_SPI_STC_FUNC()
+{
 	// New cmd
 	if( btxspi.cmd == 0 ) 
 	{

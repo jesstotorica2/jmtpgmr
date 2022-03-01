@@ -22,11 +22,15 @@ MYAVR_SRCS=	mystdlib.cpp \
 			uartxspi.cpp \
 			Stopwatch.cpp \
 			myInterrupt.cpp
-		
+
+
+# Compiler Macros
+MACRO_DEFS=	-DMY_SPI_STC_ISR 
+
 F_CPU=16000000
 CC=avr-gcc
 OBJCOPY=avr-objcopy
-CFLAGS= -Wall -g -Os -mmcu=$(MCU) -DF_CPU=$(F_CPU) -I $(INCLUDES)
+CFLAGS= -Wall -g -Os -mmcu=$(MCU) $(MACRO_DEFS) -DF_CPU=$(F_CPU) -I $(INCLUDES)
 
 LIBS= -L$(MYAVRLIB_PATH)/lib -lmy_$(MCU)
 
@@ -44,7 +48,8 @@ VPATH=	$(SRC_DIR) \
 
 # Create hexfile image for flash programming
 .PHONY: hex
-hex: dirs $(MYAVR_OBJ) $(SRC_OBJ)
+#hex: dirs $(MYAVR_OBJ) $(SRC_OBJ)
+hex: dirs  $(SRC_OBJ) $(MYAVR_OBJ)
 	#$(CC) $(CFLAGS) $(SRC_OBJ) -o $(IMG_DIR)/$(TARGET).bin $(LIBS)
 	$(CC) $(CFLAGS) $(MYAVR_OBJ) $(SRC_OBJ) -o $(IMG_DIR)/$(TARGET).bin
 	$(OBJCOPY) -j .text -j .data -O ihex $(IMG_DIR)/$(TARGET).bin $(IMG_DIR)/$(TARGET).hex
