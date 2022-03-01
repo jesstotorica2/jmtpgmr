@@ -1,33 +1,67 @@
 # AVR Library
-MYAVRLIB_PATH=~/projects/my_avr_lib.git
+MYAVRLIB_PATH=/Users/jesstotorica/projects/my_avr_lib.git
+MCU=atmega328
 
 TARGET=btprogrammer
 SRC_DIR=../src
+MYAVR_SRC_DIR=$(MYAVRLIB_PATH)/src/$(MCU)
 IMG_DIR=./image
-SRC_FILES=$(SRC_DIR)/$(TARGET).cpp 
+SRC_FILES=$(SRC_DIR)/$(TARGET).cpp
+BUILD_DIR=object_files
 
-INCLUDES= $(MYAVRLIB_PATH)/include
+INCLUDES= $(MYAVRLIB_PATH)/include/$(MCU)
 
-MCU=atmega328
+# Source files used from AVR lib
+MYAVR_SRCS=	mystdlib.cpp \
+			myUART.cpp \
+			mySPI.cpp \
+			myTimer.cpp \
+			hc05.cpp \
+			myIO.cpp \
+			atmega328_pgm.cpp \
+			uartxspi.cpp \
+			Stopwatch.cpp \
+			myInterrupt.cpp
+		
 F_CPU=16000000
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 CFLAGS= -Wall -g -Os -mmcu=$(MCU) -DF_CPU=$(F_CPU) -I $(INCLUDES)
 
-MYAVR_OBJ_FILES=$(MYAVRLIB_PATH)/build/darwin/object_files/*.o
-OBJ_FILES=$(MYAVR_OBJ_FILES)
+LIBS= -L$(MYAVRLIB_PATH)/lib -lmy_$(MCU)
 
+# Get list of source files
+SRC_FILES=$(shell cd $(SRC_DIR) && find *.cpp)
+
+# Get list of object files
+SRC_OBJ=$(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRC_FILES))
+MYAVR_OBJ=$(patsubst %.cpp,$(BUILD_DIR)/%.o,$(MYAVR_SRCS))
+
+
+# VPATH - This should include all directories where target source files reside
+VPATH=	$(SRC_DIR) \
+		$(MYAVR_SRC_DIR)
 
 # Create hexfile image for flash programming
 .PHONY: hex
-hex: dirs
-	cd $(MYAVRLIB_PATH)/build/darwin && make compile
-	$(CC) $(CFLAGS) $(OBJ_FILES) -o $(IMG_DIR)/$(TARGET).bin $(SRC_FILES)
+hex: dirs $(MYAVR_OBJ) $(SRC_OBJ)
+	#$(CC) $(CFLAGS) $(SRC_OBJ) -o $(IMG_DIR)/$(TARGET).bin $(LIBS)
+	$(CC) $(CFLAGS) $(MYAVR_OBJ) $(SRC_OBJ) -o $(IMG_DIR)/$(TARGET).bin
 	$(OBJCOPY) -j .text -j .data -O ihex $(IMG_DIR)/$(TARGET).bin $(IMG_DIR)/$(TARGET).hex
+
 
 # Create image directory
 dirs:
 	@mkdir -p $(IMG_DIR)
+	@mkdir -p $(BUILD_DIR)
+
+# Create object files from .cpp files
+$(BUILD_DIR)/%.o: %.cpp
+	@echo
+	@echo "--------------------Compiling $@----------------------"
+	$(CC) -c $(CFLAGS) -o $@ $<
+	@echo "-----------------Finished Compiling $@----------------"
+	@echo
 
 hex_debug:
 	${CC} ${CFLAGS} -o ${TARGET}.bin ${SRCS} | >> compErrs.txt
@@ -39,3 +73,9 @@ flash:
 
 clean:
 	rm -rf $(IMG_DIR)
+	rm -rf $(BUILD_DIR)
+
+.PHONY: dump
+dump:
+	@echo $(SRC_OBJ)
+	@echo $(MYAVR_OBJ)

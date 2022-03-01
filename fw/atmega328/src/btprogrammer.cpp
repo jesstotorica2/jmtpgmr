@@ -10,7 +10,7 @@
 // Global variables/objects
 myUART 								uart;
 mySPI									spi;
-Timer0								tmr0;
+Stopwatch							tmr0;
 hc05									bt;
 Atmega328_Programmer 	pgmr(&spi, &uart);
 uartxspi							btxspi;
