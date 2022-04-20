@@ -50,7 +50,6 @@ VPATH=	$(SRC_DIR) \
 .PHONY: hex
 #hex: dirs $(MYAVR_OBJ) $(SRC_OBJ)
 hex: dirs  $(SRC_OBJ) $(MYAVR_OBJ)
-	#$(CC) $(CFLAGS) $(SRC_OBJ) -o $(IMG_DIR)/$(TARGET).bin $(LIBS)
 	$(CC) $(CFLAGS) $(MYAVR_OBJ) $(SRC_OBJ) -o $(IMG_DIR)/$(TARGET).bin
 	$(OBJCOPY) -j .text -j .data -O ihex $(IMG_DIR)/$(TARGET).bin $(IMG_DIR)/$(TARGET).hex
 

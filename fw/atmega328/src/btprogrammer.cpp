@@ -8,15 +8,16 @@
 
 //==============================
 // Global variables/objects
-myUART 								uart;
-mySPI									spi;
-Stopwatch							tmr0;
-hc05									bt;
+uint8_t					uartRxBuff[UART_BUFF_SIZE];
+myUART 					uart(uartRxBuff, UART_BUFF_SIZE);
+mySPI					spi;
+Stopwatch				tmr0;
+hc05					bt;
 Atmega328_Programmer 	pgmr(&spi, &uart);
-uartxspi							btxspi;
-bool									bt_listen_to = false;
+uartxspi				btxspi;
+bool					bt_listen_to = false;
 
-char 									rbuf[RBUF_SIZE];
+char 					rbuf[RBUF_SIZE];
 
 //===========================================
 //

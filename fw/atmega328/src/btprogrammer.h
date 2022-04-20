@@ -23,7 +23,8 @@ extern int debug;
 #define BT_BAUD_RATE 						115200
 #define BT_EN_PIN								7
 
-#define RBUF_SIZE    						600
+#define UART_BUFF_SIZE							32
+#define RBUF_SIZE    							600
 
 #define SPI_MOSI								11
 #define SPI_MISO								12
