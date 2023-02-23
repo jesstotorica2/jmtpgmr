@@ -30,6 +30,7 @@ int main() {
 	char* cmd_args;
 	//_delay_ms(5000);
 	sys_init();
+	
 	//uart.print("cmd_args addr: "); uart.printnum((uint16_t)&cmd_args); uart.print("\r\n"); //DEBUG!!!!!!
 	wait_connect();
 /*
@@ -76,8 +77,9 @@ int main() {
 void sys_init() 
 {
 	uart.init( BT_BAUD_RATE, 8, 1, 0 );
-	spi.init( SPI_MST, SPI_DIV4, 0x0 );
+	spi.init( SPI_MST, SPI_DIV128, 0x0 );
 	spi.set_highz();
+	setPin(SPI_MISO,1); // Set pull-up
 	if( !bt.init( &uart, &tmr0, BT_EN_PIN, BT_BAUD_RATE ) )
 	{
 		while(1)
@@ -86,6 +88,8 @@ void sys_init()
 			_delay_ms(2000);
 		}
 	}
+	setInput(SLV_RESET);
+	setPin(SLV_RESET,0);
 	return;	
 }
 
@@ -159,10 +163,11 @@ int get_cmd(char** args)
 	//uart.print("args: "); uart.printnum((unsigned int)(*args));uart.print("\r\n"); //DEBUG!!!!!!!!!!!!!!
 
 	if( substrcmp(cmd, cmd_end, "PGM") ) 		return JMT_PGM;
-	if( substrcmp(cmd, cmd_end, "FLASH") ) 	return JMT_FLASH;
-	if( substrcmp(cmd, cmd_end, "READ") ) 	return JMT_READ;
+	if( substrcmp(cmd, cmd_end, "FLASH") ) 		return JMT_FLASH;
+	if( substrcmp(cmd, cmd_end, "READ") ) 		return JMT_READ;
 	if( substrcmp(cmd, cmd_end, "END") ) 		return JMT_END;
 	if( substrcmp(cmd, cmd_end, "ECHO") )		return JMT_ECHO;
+	if( substrcmp(cmd, cmd_end, "EESAVE") )		return JMT_EESAVE;
 	else
 		return JMT_ERROR;
 
@@ -183,34 +188,37 @@ void run_cmd(int cmd, char* args)
 	switch(cmd) 
 	{
 		
-		case JMT_PGM :
-			if( num_vals != 2 )  	print_err(JMT_PGM_INVALID_ARGS); // err
+		case JMT_PGM:
+			if( num_vals != 2 )  			print_err(JMT_PGM_INVALID_ARGS); // err
 //			if( num_vals != 2 ){  	print_err(JMT_PGM_INVALID_ARGS); uart.print("\r\n|");uart.print(rbuf);uart.print("|\r\n"); uart.print("num_vals= "); uart.printnum(num_vals); uart.print("\r\n");}//DEBUG!!!!!!!!!!!!!!!!!
-			else									jmt_pgm(vals[0],vals[1]);
+			else							jmt_pgm(vals[0],vals[1]);
 			break;
 		
 		case JMT_FLASH:
-			if		 ( !pgmr.inPgmMode() ) 		print_err(JMT_FLASH_NOT_PGM_MODE); 	// err
-			else if( num_vals != 1 		 )		print_err(JMT_FLASH_INVALID_ARGS);  // err
+			if		 ( !pgmr.inPgmMode() ) 	print_err(JMT_FLASH_NOT_PGM_MODE); 	// err
+			else if( num_vals != 1 		 )	print_err(JMT_FLASH_INVALID_ARGS);  // err
 			else														jmt_flash(vals[0]);																
 			break;
 
 		case JMT_READ:
-			if		 ( !pgmr.inPgmMode() ) 		print_err(JMT_READ_NOT_PGM_MODE);  // err
-			else if( num_vals != 2 		 )		print_err(JMT_READ_INVALID_ARGS);  // err
+			if		 ( !pgmr.inPgmMode() ) 	print_err(JMT_READ_NOT_PGM_MODE);  // err
+			else if( num_vals != 2 		 )	print_err(JMT_READ_INVALID_ARGS);  // err
 			else														jmt_read(vals[0],vals[1]);
 			break;
 		
 		case JMT_END:
-			if	( num_vals != 0	)						print_err(JMT_END_ARGS);	//err
-			else														jmt_end();
+			if	( num_vals != 0	)			print_err(JMT_END_ARGS);	//err
+			else							jmt_end();
 			break;
 	
 		case JMT_ECHO:
-			if	( num_vals != 1 ) 					print_err(JMT_ECHO_ARGS);	//err
-			else														jmt_echo(vals[0]);
+			if	( num_vals != 1 ) 			print_err(JMT_ECHO_ARGS);	//err
+			else							jmt_echo(vals[0]);
 			break;
 
+		case JMT_EESAVE:
+			if ( num_vals != 1 )			print_err(JMT_EESAVE_ARGS);
+			else							jmt_eesave(vals[0] == 1);
 		case JMT_ERROR:
 			// Disconnect from hc-05
 			if( strstr(rbuf, "+DISC:SUCCESS") != nullptr )	
@@ -246,7 +254,7 @@ void print_succ(const char* msg)
 		bt.send(msg);
 		bt.send("\r\n");
 	}
-		bt.send("OK\r\n\r\n");
+	bt.send("OK\r\n\r\n");
 }
 
 //
@@ -291,6 +299,7 @@ void jmt_pgm(int pkt_size, int verify){
 		{
 			pgmr.startProgrammingMode();
 			attempts++;
+			_delay_ms(1000);
 		}
 		// Erase flash if programming mode started successfully
 		if( pgmr.inPgmMode() ){
@@ -490,6 +499,31 @@ void jmt_echo(int begin) {
 }
 
 //
+// jmt_eesave()
+//
+// Enable (or disable) fuse bit to save eeprom data after restart
+void jmt_eesave(bool enable)
+{
+	uint8_t fhbyte = pgmr.readFuseByte(FUSE_BYTE_HIGH_IDX);
+	uint8_t eesave_msk = (1<<3);
+	if		( eesave_msk == (fhbyte & eesave_msk) && enable ) // EESAVE == 1(disabled), write to enable
+	;//setFuseByte(pgm_byte_t idx, fbyte & ~(eesave_msk));
+	else if	( 0          == (fhbyte & eesave_msk) && !enable ) // EESAVE == 0(enabled), write to disable
+	;//setFuseByte(pgm_byte_t idx, fbyte | eesave_msk);
+
+	fhbyte = pgmr.readFuseByte(FUSE_BYTE_HIGH_IDX);
+	char fhbyte_str[5];
+	fhbyte_str[0] = '0';
+	fhbyte_str[1] = 'x';
+	if( ((fhbyte >> 4) & 0xF) > 9 ) fhbyte_str[2] = 65 + ((fhbyte >> 4) & 0xF) - 10;
+	else						  fhbyte_str[2] = 48 + ((fhbyte >> 4) & 0xF);
+	if( (fhbyte & 0xF) > 9 )  fhbyte_str[3] = 65 + (fhbyte & 0xF) - 10;
+	else					fhbyte_str[3] = 48 + (fhbyte & 0xF);
+	fhbyte_str[4] = '\0';
+	print_succ(fhbyte_str);
+}
+
+//
 //**** JMT_ECHO SPI Interrupt *****
 //
 void MY_SPI_STC_FUNC()
@@ -564,7 +598,7 @@ void spi_echo_rd_reply()
 //
 // fill_arg_vals()
 //
-// Fills 'vals'array until invalid argument (non-integer) or no more arguments remaining
+// Fills 'vals' array until invalid argument (non-integer) or no more arguments remaining
 void fill_arg_vals(int* vals, int* num_vals, char** args, int max_vals) {
 	for( *num_vals = 0; (*num_vals < max_vals) && (get_arg_int(args, &vals[*num_vals])); (*num_vals)++ );
 }

@@ -67,12 +67,14 @@ class BTprogrammer:
     bstrm_blks = []
     verify  = False
     echo    = False
+    eesave  = None
 
     # kwargs    
     for key, val in kwargs.items():
-      if  ( key == 'debug'  ): self.debug = val
-      elif( key == 'verify' ): verify = val
-      elif( key == 'echo'   ): echo = val
+      if  ( key == 'debug'  ):   self.debug = val
+      elif( key == 'verify' ):   verify = val
+      elif( key == 'echo'   ):   echo = val
+      elif( key == 'eesave'   ): eesave = val
 
     pgm_st_time = time.time()
     print()
@@ -100,7 +102,12 @@ class BTprogrammer:
   
     #self._send_cmd("ECHO=0\r\n","OK\r\n")
     # Program target
-    self._init_program_request()    		
+    self._init_program_request()    
+    
+    if( eesave != None ):
+        print("eesave: {}".format(eesave))
+        self._set_eesave(eesave)
+
     self._flash_pmem(bstrm_blks)
     if( verify ):
       self._verify(bstrm_blks)
@@ -128,6 +135,13 @@ class BTprogrammer:
     # Send Command 
     self._send_cmd(pgm_req_cmd, success_resp)
   
+  #
+  # _set_eesave()
+  #
+  def _set_eesave(self, enable):
+    set_eesave_cmd="EESAVE={}".format("1" if enable else "0" )
+    success_resp = "OK\r\n"
+    self._send_cmd(set_eesave_cmd, success_resp)
 
   #
   #	_flash_pmem()
