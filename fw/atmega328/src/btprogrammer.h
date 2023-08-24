@@ -21,7 +21,7 @@ extern int debug;
 
 // HC-05
 #define BT_BAUD_RATE 						115200
-#define BT_EN_PIN								7
+#define BT_EN_PIN								2
 
 #define UART_BUFF_SIZE							32
 #define RBUF_SIZE    							600
@@ -31,7 +31,7 @@ extern int debug;
 #define SPI_SCK									13
 #define SPI_SS									10
 
-#define BT_CMD_LISTEN_TIMEOUT		20
+#define BT_CMD_LISTEN_TIMEOUT	20
 #define BT_WAIT_CONNECT_TIMEOUT 30
 
 // Commands

@@ -78,17 +78,18 @@ class BTprogrammer:
 
     pgm_st_time = time.time()
     print()
-    # Verify file exists
-    if( not os.path.exists(infile) ):
-      self._btpgm_exit( ("File '{}' not found!\n".format(infile)) )
-    else:
-      print("Creating bytestream from hex file...")
-      bstrm_blks = hx.get_bytestream(infile)
-      self._print_green("Bytestream created!")
-      self.pgm_size = 0
-      for blk in bstrm_blks:
-        self.pgm_size += blk.dbyte_count
-      print("Program Size: {} bytes\n".format(self.pgm_size))
+    # Verify file exist
+    if( infile != None ):
+        if( not os.path.exists(infile) ):
+          self._btpgm_exit( ("File '{}' not found!\n".format(infile)) )
+        else:
+          print("Creating bytestream from hex file...")
+          bstrm_blks = hx.get_bytestream(infile)
+          self._print_green("Bytestream created!")
+          self.pgm_size = 0
+          for blk in bstrm_blks:
+            self.pgm_size += blk.dbyte_count
+          print("Program Size: {} bytes\n".format(self.pgm_size))
 
     
     # Attempt to connect to device              
@@ -101,16 +102,20 @@ class BTprogrammer:
       self._btpgm_exit("Bluetooth connection attempt to device address '{}' failed!".format(target))
   
     #self._send_cmd("ECHO=0\r\n","OK\r\n")
-    # Program target
-    self._init_program_request()    
     
+    # Program fuse bits if requested
     if( eesave != None ):
         print("eesave: {}".format(eesave))
         self._set_eesave(eesave)
 
-    self._flash_pmem(bstrm_blks)
-    if( verify ):
-      self._verify(bstrm_blks)
+    # Program target
+    if( infile != None ): 
+        self._init_program_request()    
+        
+        self._flash_pmem(bstrm_blks)
+        if( verify ):
+          self._verify(bstrm_blks)
+        
     self._end_program_mode()
     
     self._print_green("\nDevice Programming Complete!")
@@ -139,7 +144,7 @@ class BTprogrammer:
   # _set_eesave()
   #
   def _set_eesave(self, enable):
-    set_eesave_cmd="EESAVE={}".format("1" if enable else "0" )
+    set_eesave_cmd="EESAVE={}\r\n".format("1" if enable else "0" )
     success_resp = "OK\r\n"
     self._send_cmd(set_eesave_cmd, success_resp)
 

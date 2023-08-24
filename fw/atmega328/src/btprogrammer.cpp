@@ -88,8 +88,7 @@ void sys_init()
 			_delay_ms(2000);
 		}
 	}
-	setInput(SLV_RESET);
-	setPin(SLV_RESET,0);
+	setOpenDrainPin(SLV_RESET, 1);
 	return;	
 }
 
@@ -123,18 +122,16 @@ void wait_connect()
 //
 //	get_cmd()
 //
-//	Waits for data from bluetoot module, then parses data and enumerates
+//	Waits for data from bluetooth module, then parses data and enumerates
 //	to a known command (or error)
 int get_cmd(char** args)
 {	
 	char* cmd = nullptr;
 	char* cmd_end = nullptr;
-	//uart.print("cmd_args addr in get: "); uart.printnum((uint16_t)args); uart.print("\r\n"); //DEBUG!!!!!!
 	
 	// Clear the buffer string
 	rbuf[0] = '\0';
 
-	//tmr0.start(); // DEBUG!!!!!!!!
 	// Listen to BT module, record if there is a timeout
 	bt_listen_to = !bt.listen(rbuf, RBUF_SIZE, "\r\n", BT_CMD_LISTEN_TIMEOUT);
 	cmd = strstr(rbuf,"JMT+");
@@ -148,19 +145,12 @@ int get_cmd(char** args)
 	// Additional args
 	(*args) = nullptr;
 
-	//uart.print("rbuf: "); uart.printnum((int)(rbuf));uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
-	//uart.print("cmd: "); uart.printnum((int)(cmd-rbuf));uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
-	//uart.print("has '=' "); uart.printnum( (int)strstr(cmd, "="    ) ); uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
 	// Find command end
-	//if(  			(cmd_end = strstr(cmd, "=" 		)) != nullptr ){	*args = (cmd_end + 1); uart.print("args: "); uart.printnum((unsigned int)(*args));uart.print("\r\n"); //DEBUG!!!!!!!!!!!!!!}
-	//uart.print("cmd_end: "); uart.printnum((int)(cmd_end));uart.print("\r\n");}//DEBUG!!!!!!!!!!!!!!
-	if(  			(cmd_end = strstr(cmd, "=" 		)) != nullptr )	*args = (cmd_end + 1);
-	else if(  (cmd_end = strstr(cmd, "?" 		)) != nullptr );
-	else if(  (cmd_end = strstr(cmd, "\r\n" )) != nullptr );
+	if(  	 (cmd_end = strstr(cmd, "=" )) != nullptr )	*args = (cmd_end + 1);
+	else if( (cmd_end = strstr(cmd, "?" )) != nullptr );
+	else if( (cmd_end = strstr(cmd, "\r\n" )) != nullptr );
 	else
 		return JMT_ERROR;
-	//uart.print("cmd_end: "); uart.printnum((int)(cmd_end));uart.print("\r\n");//DEBUG!!!!!!!!!!!!!!
-	//uart.print("args: "); uart.printnum((unsigned int)(*args));uart.print("\r\n"); //DEBUG!!!!!!!!!!!!!!
 
 	if( substrcmp(cmd, cmd_end, "PGM") ) 		return JMT_PGM;
 	if( substrcmp(cmd, cmd_end, "FLASH") ) 		return JMT_FLASH;
@@ -219,6 +209,8 @@ void run_cmd(int cmd, char* args)
 		case JMT_EESAVE:
 			if ( num_vals != 1 )			print_err(JMT_EESAVE_ARGS);
 			else							jmt_eesave(vals[0] == 1);
+			break;
+
 		case JMT_ERROR:
 			// Disconnect from hc-05
 			if( strstr(rbuf, "+DISC:SUCCESS") != nullptr )	
@@ -504,23 +496,39 @@ void jmt_echo(int begin) {
 // Enable (or disable) fuse bit to save eeprom data after restart
 void jmt_eesave(bool enable)
 {
+
+	// Start programming mode if not done already
+	uint8_t attempts = 0;
+	while( !pgmr.inPgmMode() && attempts < PGM_START_ATTEMPTS )
+	{
+		pgmr.startProgrammingMode();
+		attempts++;
+		_delay_ms(1000);
+	}
+	if( false == pgmr.inPgmMode() ) 
+	{
+		print_err(JMT_PGM_TRGT_RESP);
+		return;
+	}
+
+	// Read current fuse byte value
 	uint8_t fhbyte = pgmr.readFuseByte(FUSE_BYTE_HIGH_IDX);
+
 	uint8_t eesave_msk = (1<<3);
 	if		( eesave_msk == (fhbyte & eesave_msk) && enable ) // EESAVE == 1(disabled), write to enable
-	;//setFuseByte(pgm_byte_t idx, fbyte & ~(eesave_msk));
-	else if	( 0          == (fhbyte & eesave_msk) && !enable ) // EESAVE == 0(enabled), write to disable
-	;//setFuseByte(pgm_byte_t idx, fbyte | eesave_msk);
+	{
+		pgmr.setFuseByte(FUSE_BYTE_HIGH_IDX, fhbyte & ~(eesave_msk));
+	}
+	else if	( 0 == (fhbyte & eesave_msk) && !enable ) // EESAVE == 0(enabled), write to disable
+	{
+		pgmr.setFuseByte(FUSE_BYTE_HIGH_IDX, fhbyte | eesave_msk);
+	}
 
+	// Read back the new fuse high byte
 	fhbyte = pgmr.readFuseByte(FUSE_BYTE_HIGH_IDX);
-	char fhbyte_str[5];
-	fhbyte_str[0] = '0';
-	fhbyte_str[1] = 'x';
-	if( ((fhbyte >> 4) & 0xF) > 9 ) fhbyte_str[2] = 65 + ((fhbyte >> 4) & 0xF) - 10;
-	else						  fhbyte_str[2] = 48 + ((fhbyte >> 4) & 0xF);
-	if( (fhbyte & 0xF) > 9 )  fhbyte_str[3] = 65 + (fhbyte & 0xF) - 10;
-	else					fhbyte_str[3] = 48 + (fhbyte & 0xF);
-	fhbyte_str[4] = '\0';
-	print_succ(fhbyte_str);
+	bt.send("Fuse High Byte: 0x");
+	bt.sendnum(fhbyte, 16);
+	print_succ("");
 }
 
 //

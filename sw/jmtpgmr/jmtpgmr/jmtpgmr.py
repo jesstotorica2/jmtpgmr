@@ -25,8 +25,8 @@ def cli(ctx, debug):
 #
 @cli.command()
 #@click.command()
-@click.option('--infile','-i', required=True, help='Input .hex file')
 @click.option('--target','-t', required=True, help='Bluetooth device mac address')
+@click.option('--infile','-i', required=False, help='Input .hex file')
 @click.option('--debug','-d', required=False, is_flag=True,  help='Print debug information during programming')
 @click.option('--verify','-v', required=False, is_flag=True, help='Verify programming by reading back flash memory')
 @click.option('--echo','-e', required=False, is_flag=True, help='Enter echo mode after programming is finished')
@@ -37,8 +37,8 @@ def btpgm(infile,target,debug,verify,echo,eesave,no_eesave):
   """
   Use btpgm to program Atmega328 microcontroller via bluetooth.
   """
-  click.echo("infile={}".format(infile))
   click.echo("target={}".format(target))
+  click.echo("infile={}".format(infile))
   
   if(eesave):
     click.echo("eesave=True")

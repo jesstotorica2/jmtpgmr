@@ -72,7 +72,7 @@ hex_debug:
 	${OBJCOPY} -j .text -j .data -O ihex ${TARGET}.bin ${TARGET}.hex 
 
 flash:
-	/Applications/Arduino.app/Contents/Java/hardware/tools/avr/bin/avrdude -C/Applications/Arduino.app/Contents/Java/hardware/tools/avr/etc/avrdude.conf -v -patmega328p -carduino -P/dev/cu.usbmodem14201 -b115200 -D -Uflash:w:$(IMG_DIR)/$(TARGET).hex:i 
+	/Applications/Arduino.app/Contents/Java/hardware/tools/avr/bin/avrdude -C/Applications/Arduino.app/Contents/Java/hardware/tools/avr/etc/avrdude.conf -v -patmega328p -carduino -P/dev/cu.usbmodem14101 -b115200 -D -Uflash:w:$(IMG_DIR)/$(TARGET).hex:i 
 
 
 clean:
