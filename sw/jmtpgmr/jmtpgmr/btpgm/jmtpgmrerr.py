@@ -29,7 +29,10 @@ class jmtpgmrerr:
         11: ['JMT_READ_ARGVAL',                 "Byte length or byte address has negative value"],
         12: ['JMT_READ_TRGT_RESP',              "During memory read, an invalid transaction took place with target"],
           
-        13: ['JMT_END_ARGS',                    "Number of arguments given with end command did not equal zero."],	
+        13: ['JMT_END_ARGS',                    "Number of arguments given with end command did not equal zero."],
+        14: ['JMT_ECHO_ARGS',                   "Number of arguments provided with 'ECHO' command was not equal to one."],
+        15: ['JMT_EESAVE_ARGS',                 "Number of arguments provided with 'EESAVE' command was not equal to one."],
+        16: ['JMT_NO_DEVICE',                   "No target device detected"],
 
     }  
 
