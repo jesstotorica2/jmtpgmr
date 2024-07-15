@@ -76,10 +76,12 @@ int main() {
 //	Initialize system
 void sys_init() 
 {
+	setInput(DEVICE_DETECT);
+	setPin(DEVICE_DETECT, 0);
+
 	uart.init( BT_BAUD_RATE, 8, 1, 0 );
-	spi.init( SPI_MST, SPI_DIV128, 0x0 );
-	spi.set_highz();
-	setPin(SPI_MISO,1); // Set pull-up
+	spi.init( SPI_MST, SPI_DIV128, 0x0, true ); // mst, clk_div, mode, highz = true
+	//setPin(SPI_MISO,1); // Set pull-up
 	if( !bt.init( &uart, &tmr0, BT_EN_PIN, BT_BAUD_RATE ) )
 	{
 		while(1)
@@ -278,7 +280,17 @@ void print_err(int err)
 void jmt_pgm(int pkt_size, int verify){
 	int wr_cmd;
 	char* args;
-	spi.set_mst();
+
+	// Check for device detect
+	if( 0 == getPin(DEVICE_DETECT) )
+	{
+		print_err(JMT_NO_DEVICE);
+		return;
+	}
+	else
+	{
+		spi.set_mst();
+	}
 
 	// Check pkt size 
 	if( pkt_size > (RBUF_SIZE+64)) {

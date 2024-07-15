@@ -52,6 +52,7 @@ extern int debug;
 
 // Programmer
 #define SLV_RESET 			6
+#define DEVICE_DETECT       5
 #define PGM_START_ATTEMPTS	2
 
 
@@ -76,6 +77,7 @@ extern int debug;
 
 #define JMT_ECHO_ARGS			14 // Number of arguments provided with 'ECHO' command was not equal to one.
 #define JMT_EESAVE_ARGS			15 // Number of arguments provided with 'EESAVE' command was not equal to one.
+#define JMT_NO_DEVICE           16 // No device detected
 
 //#define JMT
 
