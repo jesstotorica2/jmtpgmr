@@ -48,10 +48,11 @@ int main() {
 	while(1)
 	{
 		if( bt_listen_timeout() ) // If HC-05 responds, bt might not be connected
-		{	uart.print("attempting poke\r\n");
-			//uart.print("\r\n");
+		{
 			if( bt.poke(75) ) // Try a quick poke (75 ms)
+			{
 				wait_connect();
+			}
 		}
 		
 		// Wait for command
