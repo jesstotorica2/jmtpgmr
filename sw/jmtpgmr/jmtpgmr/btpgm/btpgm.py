@@ -6,6 +6,7 @@
 
 import sys
 import time
+import traceback
 
 import bluetooth
 import os
@@ -30,6 +31,7 @@ class BTprogrammer:
     self.recv_size = 1024
     self.port = 1
     self.pkt_dbyte_size = 512 #TODO make configurable
+    self.read_reattempts = 5
 
     #  
     self.debug = False
@@ -92,13 +94,14 @@ class BTprogrammer:
           print("Program Size: {} bytes\n".format(self.pgm_size))
 
     
-    # Attempt to connect to device              
+    # Attempt to connect to device
     try: 
       print("Attempting to connect to bluetooth device...")
       self.btsock.connect((target, self.port))
       self.btconnected = True
       self._print_green("Bluetooth connected!")
     except:
+      print( traceback.format_exc() )
       self._btpgm_exit("Bluetooth connection attempt to device address '{}' failed!".format(target))
   
     #self._send_cmd("ECHO=0\r\n","OK\r\n")
@@ -160,34 +163,16 @@ class BTprogrammer:
     print("\nWriting to program memory...\n\n"+self._percent_bar(0), end="")
     st_time = time.time()
     for blk in bstrm_blks:
+      blk_start_t = time.time()
       flash_cmd = "FLASH={blen}\r\n".format(blen=blk.byte_count) 
       
-      # DEBUG{
-      #sent_t = time.time()
-      # }DEBUG
       # Send Command 
       self._send_cmd(flash_cmd, success_resp)
-      # DEBUG{
-      #print("\nFlash cmd total time: {} ms".format(round((time.time() - sent_t),2)))
-      #sent_t = time.time()
-      # }DEBUG
 
-      # Send Bytestream
-      # DEBUG{
-      #sent_t = time.time()
-      # }DEBUG
       if( self._send(blk.bytestream) ):
-        # DEBUG{
-        #print("Time to send: {} ms".format(round((time.time() - sent_t),2)))
-        #sent_t = time.time()
-        # }DEBUG
         resp = self._get_resp()
-        # DEBUG{
-        #print("Data sent->Got resp time: {} ms".format(round((time.time() - sent_t),2)))
-        #sent_t = time.time()
-        # }DEBUG
         if( self.debug ):
-          print("Bytestream block write time: {} ms".format(round((time.time() - st_time),2)))
+          print("Bytestream block write time: {} s".format(round((time.time() - blk_start_t),2)))
       else:
         self._btpgm_exit("Failed to send byte stream data through BT socket.")
     
@@ -200,9 +185,6 @@ class BTprogrammer:
       else:
         bytes_flashed += blk.dbyte_count
         print(self._percent_bar((100*bytes_flashed/self.pgm_size)), end="")
-      # DEBUG{
-      #print("time till end of loop: {} ms".format(round((time.time() - sent_t),2)))
-      # }DEBUG
     self._print_green("\nWrite Done!")  
     print("Write time: {} s".format(round(time.time() - st_time, 3)))
 
@@ -221,29 +203,44 @@ class BTprogrammer:
     st_time = time.time()
     for blk in bstrm_blks:
       for sect in range(blk.section_count):
-        # Read section   
-        read_cmd = "READ={baddr},{blen}\r\n".format(baddr=blk._start_addr[sect], blen=blk._dbyte_count[sect])
-        self._send_cmd(read_cmd, success_resp)		 				        
+        for attempt in range( self.read_reattempts ):
+            blk_start_t = time.time()
+            # Read section
+            read_cmd = "READ={baddr},{blen}\r\n".format(baddr=blk._start_addr[sect], blen=blk._dbyte_count[sect])
+            self._send_cmd(read_cmd, success_resp)
 
-        # Get byte data 
-        rd_data = self._get_bdata_resp(blk._dbyte_count[sect])
-        if( self.debug ):
-          print("Block section readback time: {} ms".format(round((time.time() - st_time),2)))
+            # Get byte data
+            rd_data = self._get_bdata_resp(blk._dbyte_count[sect])
+            if( self.debug ):
+              print("Block section readback time: {} s".format(round((time.time() - blk_start_t),2)))
 
-        # Compare to write data
-        fail_idx = blk.cmp_section(sect, rd_data)
-        if( fail_idx != -1 ):
-          match = False
-          if( fail_idx == -2 ):
-            self._btpgm_exit( "During verification, bytestream read was not the same length as the bytestream written.\nWrite byte length: {wlen}\nRead byte length: {rlen}".format(wlen=blk._dbyte_count[sect],rlen=len(rd_data)) )
-          else:
-            fail_addr = blk._start_addr[sect] + fail_idx
-            self._btpgm_exit("Byte read did not match byte written!\nByte address: {baddr}\nWrite Data: {wdata}\nRead Data: {rdata}".format(baddr=fail_addr, wdata=hex(blk.bytestream[blk._dbyte_ptr[sect]+fail_idx]), rdata=hex(rd_data[fail_idx])))
-          break
-        else:
-          bytes_read += blk._dbyte_count[sect]
-          print(self._percent_bar((100*bytes_read/self.pgm_size)), end="")
-            
+            # Compare to write data
+            fail_idx = blk.cmp_section(sect, rd_data)
+            if( fail_idx != -1 ):
+              match = False
+              if( fail_idx == -2 ):
+                self._btpgm_exit(
+                  "During verification, bytestream read was not the same length as the bytestream written.\n"
+                  "Write byte length: {wlen}\n"
+                  "Read byte length: {rlen}".format(wlen=blk._dbyte_count[sect],rlen=len(rd_data))
+                )
+              else:
+                fail_addr = blk._start_addr[sect] + fail_idx
+                if( attempt >= (self.read_reattempts-1) ):
+                    self._btpgm_exit(
+                      "Byte read did not match byte written!\n"
+                      "Byte address: {baddr}\n"
+                      "Write Data: {wdata}\nRead Data: {rdata}".format(
+                         baddr=fail_addr,
+                         wdata=hex(blk.bytestream[blk._dbyte_ptr[sect]+fail_idx]),
+                         rdata=hex(rd_data[fail_idx])
+                      )
+                    )
+            else:
+              bytes_read += blk._dbyte_count[sect]
+              print(self._percent_bar((100*bytes_read/self.pgm_size)), end="")
+              break
+
     self._print_green("\nProgram verified!") 
     print("Read time: {} s".format(round(time.time() - st_time, 3)))
 
@@ -271,12 +268,12 @@ class BTprogrammer:
   def echo(self,target,**kwargs):
     already_connected = False
 
-    # kwargs    
+    # kwargs
     for key, val in kwargs.items():
       pass
       #if( key == 'verify' ): self.verify = val
       #if( key == 'debug'  ): self.debug = val
-    
+
     if( not self.btconnected ):
       self.btsock.connect((target, self.port))
       self.btconnected = True
@@ -301,7 +298,7 @@ class BTprogrammer:
     while( not term.exit_req ):
       # Run terminal output
       term.eval()
-      
+
       # Send data available?
       if( term.line_count > 0 ):
         self._send(term.get_line())
@@ -338,21 +335,9 @@ class BTprogrammer:
   def _send_cmd(self,cmd, success_resp) -> str:
     resp = ""
     # Send cmd
-    # DEBUG{
-    #sent_t = time.time()
-    # }DEBUG
     if( self._send("JMT+"+cmd) ):
-      # DEBUG{
-      #if( "FLASH" in cmd ):
-      #  print("\nFlash send time: {} ms".format(round((time.time() - sent_t),2)))
-      #  sent_t = time.time()
-      # }DEBUG
+      time.sleep(0.050)
       resp = self._get_resp()
-      # DEBUG{
-      #if( "FLASH" in cmd ):
-      #  print("\nFlash resp time: {} ms".format(round((time.time() - sent_t),2)))
-      #  sent_t = time.time()
-      # }DEBUG
     else:
       self._btpgm_exit("Failed to send data through BT socket.")
     
@@ -377,13 +362,14 @@ class BTprogrammer:
       bdata = data.encode()
       
     success = False
+    self.btsock.setblocking( True )
     if( self.btconnected ):
       try:
         if( self.debug and not isinstance(data, bytearray)):
           print("Sending:\n{}\n".format(self._format_resp(data)))
         self.btsock.send(bdata)
         success = True
-      except:
+      except Exception as e:
         success = False
     return success
 
@@ -397,26 +383,32 @@ class BTprogrammer:
     token_found = False
 
 
-    # I think the function 'recv' will return upon recieving some data, possibly after buffer size? 
-    # I think the settimeout will cause it to return after not recieving data for the specified number of seconds
-    #self.btsock.setblocking(True)
-    self.btsock.settimeout(.1) # Check back from 'recv' every 100ms if no data has been recieved
+    self.btsock.settimeout( 1 ) # Check back from 'recv' every 1s if no data has been recieved
     st_time = time.time()
     timed_out = False
 
     while( (not timed_out) and (not token_found) ):
       try:
         resp_data += self.btsock.recv(1).decode()
-      except:
+      except TimeoutError:
         pass
+      except:
+        print( traceback.format_exc() )
+        self._btpgm_exit( "Exception occurred during recv()" )
       token_found = (resp_end in resp_data[(-3-token_len):]) # Trying to prevent from seaching entire string each byte!
       timed_out = ((time.time() - st_time) > timeout)
 
     if( timed_out ):
       resp_err = "Bluetooth timeout!\n"
-      resp_err += ("No response from programmer!") if(resp_data == "") else ( "Token not found. Response data:\n{}\n".format(self._format_resp(resp_data)) )
-      self._btpgm_exit(resp_err)
-     
+      if( resp_data == "" ):
+        resp_err += ("No response from programmer!")
+      else:
+        resp_err += ( "Token '{}' not found. Response data:\n{}\n".format(
+                      re.sub( "\r\n", "{\\r}{\\n}", resp ),
+                      self._format_resp(resp_data))
+        )
+      self._btpgm_exit( resp_err )
+
     if( self.debug ):
       print( "Device Response:\n{}\n".format( self._format_resp(resp_data)) )
 
@@ -430,25 +422,33 @@ class BTprogrammer:
     resp_data = bytearray()
     recv_blen = 0
 
-    self.btsock.settimeout(.500) # Check back every .5 seconds
+    self.btsock.settimeout( 1 ) # Check back every 1 seconds
     st_time = time.time()
     timed_out = False
 
-    while( (not timed_out) and recv_blen < blen ):   
+    while( (not timed_out) and recv_blen < blen ):
       try:
         recv_data = self.btsock.recv(1)
         recv_blen += len(recv_data)
         resp_data += recv_data
-      except:
+      except TimeoutError:
         pass
-    
-    timed_out = ((time.time() - st_time) > timeout)
-    
+      except:
+        print( traceback.format_exc() )
+        self._btpgm_exit( "Exception occurred during recv()" )
+
+      timed_out = ((time.time() - st_time) > timeout)
+
     if( timed_out ):
       resp_err = "Bluetooth timeout!\n"
-      resp_err += ("No byte data received from programmer!") if(recv_blen == 0) else ( "Did not receive {blen} bytes before timeout. Response data:\n{bdata}\n".format(blen=recv_blen, bdata=self._format_resp(resp_data)) )
+      if( recv_blen == 0 ):
+          resp_err += ("No byte data received from programmer!")
+      else:
+          resp_err += ( "Did not receive {blen} bytes before timeout. Response data:\n"
+                        "{bdata}\n".format( blen=recv_blen, bdata=self._format_resp(resp_data) )
+                      )
       self._btpgm_exit(resp_err)
-     
+
     if( self.debug ):
       print( "Device Response:\n{}\n".format(self._format_resp(resp_data)) )
 
@@ -462,6 +462,7 @@ class BTprogrammer:
   #	Formats	a response from bluetooth device. Prints blue.
   def _format_resp(self, resp) -> str:
     resp_str = ""
+    re.sub( "\r\n", "{\\r}{\\n}\r\n", resp )
     if( isinstance(resp, bytearray) ):
       resp_str = ""
       for i in range(len(resp)):
