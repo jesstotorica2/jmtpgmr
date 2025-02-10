@@ -404,7 +404,7 @@ class BTprogrammer:
         resp_err += ("No response from programmer!")
       else:
         resp_err += ( "Token '{}' not found. Response data:\n{}\n".format(
-                      re.sub( "\r\n", "{\\r}{\\n}", resp ),
+                      re.sub( "\r\n", "{\\r}{\\n}", resp_end ),
                       self._format_resp(resp_data))
         )
       self._btpgm_exit( resp_err )
