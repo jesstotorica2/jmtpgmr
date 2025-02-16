@@ -4,3 +4,4 @@
 *bin/jmtpgmr
 *.swp
 *.pyc
+*.DS_Store
