@@ -64,7 +64,7 @@ def btpgm(ctx, target):
 # Subcommand: wifipgm
 #
 @cli.command()
-@click.option('--target','-t', required=False, default="192.168.0.232", help='Wifi device IP address')
+@click.option('--target','-t', required=False, default="192.168.1.243", help='Wifi device IP address')
 @click.pass_context
 def wifipgm(ctx, target):
   """

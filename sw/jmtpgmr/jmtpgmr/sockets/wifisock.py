@@ -13,7 +13,7 @@ class WifiSock(socket.socket):
   def __init__(self, host_ip : str, **kwargs):
     super().__init__( socket.AF_INET, socket.SOCK_STREAM )
     self.host_ip = host_ip
-    self.port = 1
+    self.port = 69
     #
     #self.recv_size = 1024
     #self.port = 1
