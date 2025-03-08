@@ -2,8 +2,11 @@
 MYAVRLIB_PATH=/Users/jesstotorica/projects/my_avr_lib.git
 MCU=atmega328
 
-TARGET=btprogrammer
+#TARGET=btprogrammer
+TARGET=jmtprogrammer
+WIFACE=bt
 SRC_DIR=../src
+IFACE_DIR=$(SRC_DIR)/interfaces
 MYAVR_SRC_DIR=$(MYAVRLIB_PATH)/src/$(MCU)
 IMG_DIR=./image
 SRC_FILES=$(SRC_DIR)/$(TARGET).cpp
@@ -16,12 +19,13 @@ MYAVR_SRCS=	mystdlib.cpp \
 			myUART.cpp \
 			mySPI.cpp \
 			myTimer.cpp \
-			hc05.cpp \
 			myIO.cpp \
 			atmega328_pgm.cpp \
 			uartxspi.cpp \
 			Stopwatch.cpp \
-			myInterrupt.cpp
+			myInterrupt.cpp \
+			hc05.cpp \
+			esp8266.cpp
 
 
 # Compiler Macros
@@ -40,17 +44,18 @@ SRC_FILES=$(shell cd $(SRC_DIR) && find *.cpp)
 # Get list of object files
 SRC_OBJ=$(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRC_FILES))
 MYAVR_OBJ=$(patsubst %.cpp,$(BUILD_DIR)/%.o,$(MYAVR_SRCS))
-
+WIFACE_OBJ=$(BUILD_DIR)/$(WIFACE)_iface.o
 
 # VPATH - This should include all directories where target source files reside
 VPATH=	$(SRC_DIR) \
-		$(MYAVR_SRC_DIR)
+		$(MYAVR_SRC_DIR) \
+		$(IFACE_DIR)
 
 # Create hexfile image for flash programming
 .PHONY: hex
 #hex: dirs $(MYAVR_OBJ) $(SRC_OBJ)
-hex: dirs  $(SRC_OBJ) $(MYAVR_OBJ)
-	$(CC) $(CFLAGS) $(MYAVR_OBJ) $(SRC_OBJ) -o $(IMG_DIR)/$(TARGET).bin
+hex: dirs $(SRC_OBJ) $(WIFACE_OBJ) $(MYAVR_OBJ)
+	$(CC) $(CFLAGS) $(MYAVR_OBJ) $(SRC_OBJ) $(WIFACE_OBJ) -o $(IMG_DIR)/$(TARGET).bin
 	$(OBJCOPY) -j .text -j .data -O ihex $(IMG_DIR)/$(TARGET).bin $(IMG_DIR)/$(TARGET).hex
 
 

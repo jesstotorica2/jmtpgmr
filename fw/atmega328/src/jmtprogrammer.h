@@ -1,6 +1,6 @@
 /*
 
-	btprogrammer.h
+	jmtprogrammer.h
 
 	Macros and prototypes for btprogrammer
 */
@@ -19,10 +19,7 @@ extern int debug;
 // Macros
 #define MY_SPI_STC_ISR 1
 
-// HC-05
-#define BT_BAUD_RATE 						115200
-#define BT_EN_PIN								2
-
+#define UART_DEFAULT_BR                         115200
 #define UART_BUFF_SIZE							32
 #define RBUF_SIZE    							600
 
@@ -31,11 +28,11 @@ extern int debug;
 #define SPI_SCK									13
 #define SPI_SS									10
 
-#define BT_CMD_LISTEN_TIMEOUT	20
-#define BT_WAIT_CONNECT_TIMEOUT 30
+#define CMD_LISTEN_TIMEOUT	 20
+#define WAIT_CONNECT_TIMEOUT 30
 
 // Commands
-#define JMT_ERROR    -1        
+#define JMT_ERROR  -1        
 
 #define JMT_PGM     0		// Start programming mode (puts target device into programming mode)
 #define JMT_FLASH   1		// Flashes data to program memory
@@ -87,7 +84,7 @@ typedef char rbuf_t;
 //==============================
 // Prototypes
 void sys_init();
-void wait_connect();
+//void wait_connect();
 int  get_cmd(char** args);
 void run_cmd(int cmd, char* args);
 void print_succ(const char* msg = nullptr);
@@ -109,6 +106,5 @@ bool substrcmp(char* str, char* end, const char* val);
 bool has_str(char* str, const char* sub);
 bool str_is_int(char* str);
 uint16_t buf_byte_to_uint(int st, int len);
-bool bt_listen_timeout();
 
 

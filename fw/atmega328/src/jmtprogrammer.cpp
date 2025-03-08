@@ -1,23 +1,23 @@
 /*
 
-	btprogrammer.cpp
+	jmtprogrammer.cpp
 
 */
 
-#include "btprogrammer.h"
+#include "wireless_iface.h"
+#include "jmtprogrammer.h"
 
 //==============================
 // Global variables/objects
 uint8_t					uartRxBuff[UART_BUFF_SIZE];
 myUART 					uart(uartRxBuff, UART_BUFF_SIZE);
+char 					rbuf[RBUF_SIZE];
 mySPI					spi;
 Stopwatch				tmr0;
-hc05					bt;
+WirelessIface           wiface(rbuf, RBUF_SIZE);
 Atmega328_Programmer 	pgmr(&spi, &uart);
 uartxspi				btxspi;
-bool					bt_listen_to = false;
 
-char 					rbuf[RBUF_SIZE];
 
 //===========================================
 //
@@ -25,14 +25,15 @@ char 					rbuf[RBUF_SIZE];
 //
 //===========================================
 #define PGMR_DEBUG
-int main() {
+int main()
+{
 	int 	cmd;
 	char* cmd_args;
 	//_delay_ms(5000);
 	sys_init();
 	
 	//uart.print("cmd_args addr: "); uart.printnum((uint16_t)&cmd_args); uart.print("\r\n"); //DEBUG!!!!!!
-	wait_connect();
+	wiface.wait_connect();
 /*
 //speed test
 	uart.print("connected\r\n");
@@ -47,18 +48,15 @@ int main() {
 
 	while(1)
 	{
-		if( bt_listen_timeout() ) // If HC-05 responds, bt might not be connected
+		
+		if( wiface.listen_timeout() )
 		{
-			if( bt.poke(75) ) // Try a quick poke (75 ms)
-			{
-				wait_connect();
-			}
+			while( false == wiface.check_status() ) _delay_ms( 1000 );
 		}
-		
+
 		// Wait for command
-		cmd = get_cmd(&cmd_args);	
+		cmd = get_cmd( &cmd_args );
 		run_cmd(cmd, cmd_args);
-		
 	}
 
 	return 0;
@@ -80,14 +78,15 @@ void sys_init()
 	setInput(DEVICE_DETECT);
 	setPin(DEVICE_DETECT, 0);
 
-	uart.init( BT_BAUD_RATE, 8, 1, 0 );
+	uart.init( UART_DEFAULT_BR, 8, 1, 0 );
 	spi.init( SPI_MST, SPI_DIV128, 0x0, true ); // mst, clk_div, mode, highz = true
-	//setPin(SPI_MISO,1); // Set pull-up
-	if( !bt.init( &uart, &tmr0, BT_EN_PIN, BT_BAUD_RATE ) )
+	
+	
+	if( false == wiface.init( &uart, &tmr0 ) )
 	{
 		while(1)
 		{
-			uart.print("BT_CNCT_ERR");
+			uart.print("DEV_CNCT_ERR");
 			_delay_ms(2000);
 		}
 	}
@@ -100,7 +99,7 @@ void sys_init()
 //	wait_connect()
 //
 //	Start inquiry, wait for device to connect
-void wait_connect() 
+/*void wait_connect() 
 {
 	bool connected = false;
 
@@ -119,7 +118,7 @@ void wait_connect()
 		//if(connected) {uart.print("connected with |");uart.print(rbuf);uart.print("|\r\n");}
 	}
 	
-}
+}*/
 
 
 //
@@ -135,8 +134,8 @@ int get_cmd(char** args)
 	// Clear the buffer string
 	rbuf[0] = '\0';
 
-	// Listen to BT module, record if there is a timeout
-	bt_listen_to = !bt.listen(rbuf, RBUF_SIZE, "\r\n", BT_CMD_LISTEN_TIMEOUT);
+	// Listen to interface device
+	wiface.listen(rbuf, RBUF_SIZE, "\r\n", CMD_LISTEN_TIMEOUT);
 	cmd = strstr(rbuf,"JMT+");
 
 	// Check if prefix was found
@@ -219,11 +218,10 @@ void run_cmd(int cmd, char* args)
 			if( strstr(rbuf, "+DISC:SUCCESS") != nullptr )	
 			{ 
 				_delay_ms(10); 
-				wait_connect(); 
-				bt_listen_to = false;
+				wiface.wait_connect(); 
 			}
 			// BT listen timeout
-			else if( bt_listen_to );//{uart.print("bt tout\r\n");}
+			else if( wiface.listen_timeout() );//{uart.print("bt tout\r\n");}
 			else
 			{
 				//uart.print("in err with |"); uart.print(rbuf); uart.print("|\r\n");
@@ -246,10 +244,14 @@ void print_succ(const char* msg)
 {
 	if(msg != nullptr)
 	{
-		bt.send(msg);
-		bt.send("\r\n");
+		//char tmp = (char*)malloc( strlen(msg) + sizeof("\r\n") );
+		//strcpy( tmp, msg );
+		//strcat( tmp, "\r\n" );
+		//wiface.send( tmp );
+		wiface.send( msg );
+		wiface.send( "\r\n" );
 	}
-	bt.send("OK\r\n\r\n");
+	wiface.send( "OK\r\n\r\n" );
 }
 
 //
@@ -261,9 +263,9 @@ void print_err(int err)
 {
 	char num_str[5];
 	itoa(err, num_str, 10);
-	bt.send("ERROR(");
-	bt.send(num_str);
-	bt.send(")\r\n\r\n");
+	wiface.send( "ERROR(" );
+	wiface.send( num_str );
+	wiface.send( ")\r\n\r\n" );
 }
 
 //*******************************************
@@ -317,7 +319,7 @@ void jmt_pgm(int pkt_size, int verify){
 	
 	// Run programmer while in programming mode
 	int err_cnt = 0;
-	while( pgmr.inPgmMode() && err_cnt < 3 && !bt_listen_to ) 
+	while( pgmr.inPgmMode() && err_cnt < 3 && !wiface.listen_timeout() ) 
 	{
 		// Wait for flash cmd
 		wr_cmd = get_cmd(&args);
@@ -353,7 +355,7 @@ void jmt_flash(int stream_blen){
 		//bt.debug=true; //DEBUG
 		// Wait for bytestream
 		//debug = 1; //DEBUG!!!!!!!!
-		bt_listen_to = !bt.listen(rbuf, stream_blen, nullptr);//, BT_CMD_LISTEN_TIMEOUT);
+		wiface.listen(rbuf, stream_blen, nullptr);//, CMD_LISTEN_TIMEOUT);
 		//uart.print("Flash data recieved: "); uart.printnum(tmr0.read()); uart.print(" ms\r\n");//DEBUG!!!!!
 			
 		
@@ -373,7 +375,7 @@ void jmt_flash(int stream_blen){
 
 
 			if( pgmr.errFlag() ){  // Check for errors during Pmem write
-				bt.sendnum(pgmr.errFlag(), 16);
+				wiface.sendnum( pgmr.errFlag(), 16 );
 				print_err(JMT_FLASH_TRGT_RESP);
 				bidx = stream_blen; // Exit loop
 			}
@@ -400,20 +402,22 @@ void jmt_flash(int stream_blen){
 // program memory
 void jmt_read(int baddr, int blen) {
 	if( baddr < 0 || blen < 0 ) print_err(JMT_READ_ARGVAL); 
-	else{
+	else
+	{
 		print_succ();
 		
 		// Ensure target device is not busy
 		while( pgmr.atmegaIsBusy() );
 		
+		// Setup a transmit of blen bytes
+		wiface.tr_setup( blen );
+		
 		// Begin reading data
 		for( int i = baddr; i < (baddr+blen); i++ ){
-			bt.tr( pgmr.rdPmemByte(int(i/WORD_BLEN), (i%2==1)) );
+			wiface.tr( pgmr.rdPmemByte(int(i/WORD_BLEN), (i%2==1)) );
 		}
 		
-		if( pgmr.errFlag() )	print_err(JMT_READ_TRGT_RESP);
-		//else									print_succ();
-
+		if( pgmr.errFlag() ) print_err(JMT_READ_TRGT_RESP);
 	}
 
 }
@@ -439,7 +443,7 @@ void spi_echo_rd_reply();
 void jmt_echo(int begin) {
 	if( begin != 0 ) { 
 		bool echoing = true;
-		char* wr_buf = (rbuf+WR_BUF_IDX);
+		//char* wr_buf = (rbuf+WR_BUF_IDX);
 		const char echo_cmd[] = "JMT+ECHO=0\r\n";
 		uint8_t ecmd_len = strlen(echo_cmd);
 		uint8_t ecmd_idx = 0;
@@ -485,7 +489,8 @@ void jmt_echo(int begin) {
 			
 			// Transmitting thru uart (sending stored write data from master device)
 			if( btxspi.wr_uart_ptr != btxspi.wr_spi_ptr ){	
-				bt.tr( (unsigned char) wr_buf[btxspi.wr_uart_ptr] );
+				//bt.tr( (unsigned char) wr_buf[btxspi.wr_uart_ptr] );
+				
 				/*uart.print("wr_uart_ptr: "); uart.printnum(btxspi.wr_uart_ptr); uart.print("\r\n");
 				uart.print("wr_spi_ptr: "); uart.printnum(btxspi.wr_spi_ptr); uart.print("\r\n");
 				uart.print("req_wlen: "); uart.printnum(btxspi.req_wlen); uart.print("\r\n");
@@ -539,8 +544,8 @@ void jmt_eesave(bool enable)
 
 	// Read back the new fuse high byte
 	fhbyte = pgmr.readFuseByte(FUSE_BYTE_HIGH_IDX);
-	bt.send("Fuse High Byte: 0x");
-	bt.sendnum(fhbyte, 16);
+	wiface.send("Fuse High Byte: 0x");
+	wiface.sendnum(fhbyte, 16);
 	print_succ("");
 }
 
@@ -620,7 +625,8 @@ void spi_echo_rd_reply()
 // fill_arg_vals()
 //
 // Fills 'vals' array until invalid argument (non-integer) or no more arguments remaining
-void fill_arg_vals(int* vals, int* num_vals, char** args, int max_vals) {
+void fill_arg_vals(int* vals, int* num_vals, char** args, int max_vals)
+{
 	for( *num_vals = 0; (*num_vals < max_vals) && (get_arg_int(args, &vals[*num_vals])); (*num_vals)++ );
 }
 
@@ -637,18 +643,18 @@ bool get_arg_int(char** args, int* val) {
 		last_arg = true;
 	}
 	
-	if( end == nullptr )	return false;										// If neither return false
-	else								 	(*end) = '\0';									// Terminate string
+	if( end == nullptr ) return false;  // If neither return false
+	else				 (*end) = '\0'; // Terminate string
 	
 	
 	// Convert string to int
-	if( str_is_int(*args) )		(*val) = atoi((*args));
-	else											return false;	
+	if( str_is_int(*args) )	(*val) = atoi((*args));
+	else					return false;	
 
 
 	// Move arg pointer to start of next string
 	if( last_arg ) (*args) = end;
-	else					 (*args) = (end+1);
+	else			(*args) = (end+1);
 	
 
 	return true;
@@ -706,18 +712,3 @@ uint16_t buf_byte_to_uint( int st, int len ) {
 	return val;
 }
 
-//
-// bt_listen_timeout()
-//
-// Bluetooth timeout clear on read function
-bool bt_listen_timeout()
-{
-	if( bt_listen_to )
-	{
-		bt_listen_to = false;
-		return true;
-	}
-	else 
-		return false;
-	
-}
