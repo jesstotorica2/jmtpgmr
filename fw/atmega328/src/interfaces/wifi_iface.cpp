@@ -6,6 +6,7 @@
 
 #define WIFI_BAUD_RATE 115200
 #define WIFI_RST_PIN   2
+#define WIFI_CONFIGURE_PIN 8
 
 esp8266 wifi;
 unsigned char wifi_last_link_id = 0;
@@ -25,7 +26,7 @@ void _wifi_recover(char* wifi_rbuf, const int rbuf_size);
 //
 // Configure the esp8266 module. Function does not return until controller has been successfully configured
 // Enters recovery mode on failures
-#define WIFI_AP_SET_IP_CMD "AT+CIPAP_CUR=192.168.1.243\r\n"
+#define WIFI_AP_SET_IP_CMD "AT+CIPAP_CUR=\"192.168.1.243\"\r\n"
 #define WIFI_AP_CREATE_SERVER_CMD "AT+CIPSERVER=1,69\r\n"
 void _wifi_configure(char* wifi_rbuf, const int rbuf_size)
 {
@@ -46,7 +47,6 @@ void _wifi_configure(char* wifi_rbuf, const int rbuf_size)
 			{
 				sts &= _wifi_connect( 3, wifi_rbuf, rbuf_size );	
 			}	
-			
 		}
 
 		if( sts )
@@ -90,35 +90,14 @@ bool _wifi_configure_station(bool quit_ap, char* wifi_rbuf, const int rbuf_size)
 //
 // AT+CWSAP_CUR=<ssid>,<pwd>,<chl>,<ecn>[, <max conn>][,<ssid hidden>]
 //#define WIFI_CONFIG_AP_CMD "," TO_STR(JMTIOT_ESP8266_AP_PSWD) ",5,3" // 3 = WPA2_PSK
-#define WIFI_CONFIG_AP_CMD "jmtiot_wifi_pgmr,programstuff,83,5,3\r\n" // 3 = WPA2_PSK
+#define WIFI_CONFIG_AP_CMD "AT+CWSAP_CUR=\"jmtiot_wifi_pgmr\",\"programstuff\",5,3\r\n" // 3 = WPA2_PSK
 bool _wifi_configure_AP(char* wifi_rbuf, const int rbuf_size)
 {
-	// Get current station name (should be based on mac address, thus will be unique)	
-	/*if( wifi.send("AT+CWSAP_CUR?\r\n", wifi_rbuf, rbuf_size) )
-	{
-		char* ap_name = wifi_rbuf;
-		int idx = 0;
-		// Jump to ':'
-		while( ap_name[0] != ':' && ap_name[0] != '\0' && idx < rbuf_size ) 
-		{
-			ap_name++;
-			idx++;
-		}
-		if( ap_name[0] == ':' )
-		{
-			idx = 0;
-			ap_name += 1;
-			// Jump to ','
-			while( ap_name[idx] != ',' && ap_name[idx] != '\0' && idx < rbuf_size ) idx++; 
-			ap_name[idx] = '\0';
-			uart.tr_str("AT+CWSAP_CUR=");
-			uart.tr_str(ap_name);
-			uart.tr_str(WIFI_CONFIG_AP_CMD);
-			return( wifi.send("\r\n", wifi_rbuf, rbuf_size) );	
-		}
-	}
-	return false;*/
-	if( false == wifi.send("AT+CWMODE=2\r\n", wifi_rbuf, rbuf_size) ) return false;; // 2-Soft Access Point
+	// Set as Access Point
+	if( false == wifi.send( "AT+CWMODE=2\r\n", wifi_rbuf, rbuf_size ) ) return false; // 2-Soft Access Point
+	if( false == wifi.send("AT+CIPMUX=1\r\n", wifi_rbuf, rbuf_size) ) return false; // 1 - configure for multiple connections
+	// Setup IP address of access point
+	if( false == wifi.send( WIFI_AP_SET_IP_CMD, wifi_rbuf, rbuf_size ) ) return false;
 	// Setting AP to have a password here
 	if( false == wifi.send( WIFI_CONFIG_AP_CMD, wifi_rbuf, rbuf_size ) ) return false;	
 	return true;	
@@ -338,6 +317,11 @@ WirelessIface::~WirelessIface()
 //
 bool WirelessIface::init(myUART* uart, Stopwatch* tmr)
 {
+	setPUD( 0 ); // make sure global pull-up disable is cleared
+
+	// Setup configure pin as pull-up
+	setInput( WIFI_CONFIGURE_PIN );
+	setPin( WIFI_CONFIGURE_PIN, 1 );
 
 	// Setup reset pin to be open-drain type pin (esp board has local pull-up)
 	setInput( WIFI_RST_PIN );
@@ -349,6 +333,7 @@ bool WirelessIface::init(myUART* uart, Stopwatch* tmr)
 	_delay_ms( 500 );
 
 	// Configure esp8266, connect to wifi, start server
+	wifi_configure_as_ap = getPin( WIFI_CONFIGURE_PIN );
 	_wifi_configure( buff, buff_size );
 	return true;
 }

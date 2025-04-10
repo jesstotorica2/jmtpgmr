@@ -7,6 +7,16 @@
 #include "wireless_iface.h"
 #include "jmtprogrammer.h"
 
+#define ECHO_BUFF_SIZE (RBUF_SIZE/3)
+
+struct SpiEchoTxn
+{
+	uint8_t cmd;
+	uint8_t req_wlen;
+	uint8_t req_rlen;
+};
+
+
 //==============================
 // Global variables/objects
 uint8_t					uartRxBuff[UART_BUFF_SIZE];
@@ -16,7 +26,10 @@ mySPI					spi;
 Stopwatch				tmr0;
 WirelessIface           wiface(rbuf, RBUF_SIZE);
 Atmega328_Programmer 	pgmr(&spi, &uart);
-uartxspi				btxspi;
+//uartxspi				btxspi;
+SpiEchoTxn              se_txn;
+myFifo                  spi_din_fifo( (rbuf+ECHO_BUFF_SIZE), ECHO_BUFF_SIZE );
+myFifo                  spi_dout_fifo( (rbuf+(2*ECHO_BUFF_SIZE)), ECHO_BUFF_SIZE );
 
 
 //===========================================
@@ -427,7 +440,8 @@ void jmt_read(int baddr, int blen) {
 //	jmt_end()
 //
 //	Releases slave from reset/programming mode
-void jmt_end() {
+void jmt_end()
+{
 	pgmr.endProgrammingMode();
 	print_succ();	
 }
@@ -436,12 +450,14 @@ void jmt_end() {
 //
 //	jmt_echo()
 //
-// 	Act as SPI slave, echo data sent from target device over bluetooth. Data sent to programmer will be held 
+// 	Act as SPI slave, echo data sent from target device over interface. Data sent to programmer will be held 
 //	in buffer until requested by the slave.
 #define WR_BUF_IDX RBUF_SIZE/2
 void spi_echo_rd_reply();
-void jmt_echo(int begin) {
-	if( begin != 0 ) { 
+void jmt_echo(int begin) 
+{
+	if( begin != 0 ) 
+	{
 		bool echoing = true;
 		//char* wr_buf = (rbuf+WR_BUF_IDX);
 		const char echo_cmd[] = "JMT+ECHO=0\r\n";
@@ -449,7 +465,7 @@ void jmt_echo(int begin) {
 		uint8_t ecmd_idx = 0;
 
 		spi.enable_interrupt();
-		spi.enable(0); // Enable as slave
+		spi.enable( 0 ); // Enable as slave
 
 		print_succ();
 		
@@ -457,20 +473,30 @@ void jmt_echo(int begin) {
 		uart.flush();
 
 		// Reset bt <-> spi buffer pointers
-		btxspi.reset();
-			
+		//se_txn.reset(); // TOD zero out se_txn AND clear fifos
+		se_txn.cmd = 0;
+		se_txn.req_wlen = 0;
+		se_txn.req_rlen = 0;
+		spi_din_fifo.clear();
+		spi_dout_fifo.clear();
+
+
 		// Run echoer
-		while( echoing ){
+		while( echoing )
+		{
 
 			// Recieving from uart (store as read data for master device)
-			if( uart.available() && ((btxspi.rd_uart_ptr+1) != btxspi.rd_spi_ptr) ) // Check data ready and buffer not full
+			//if( uart.available() && ((se_txn.rd_uart_ptr+1) != se_txn.rd_spi_ptr) ) // Check data ready and buffer not full
+			// TODO need way to change out uart.available() for data available from ESP
+			if( uart.available() && false == spi_dout_fifo.full() ) // Check data ready and buffer not full
 			{
 				char rcv_char = uart.read();
-				rbuf[btxspi.rd_uart_ptr] = rcv_char;
-				
-				//uart.print("rd_uart_ptr: "); uart.printnum(btxspi.rd_uart_ptr); uart.print("\n");
-				//uart.print("rd_spi_ptr: "); uart.printnum(btxspi.rd_spi_ptr); uart.print("\n");
-				//uart.print("req_rlen: "); uart.printnum(btxspi.req_rlen); uart.print("\n");
+				//rbuf[se_txn.rd_uart_ptr] = rcv_char;
+				spi_dout_fifo.push( rcv_char );
+
+				//uart.print("rd_uart_ptr: "); uart.printnum(se_txn.rd_uart_ptr); uart.print("\n");
+				//uart.print("rd_spi_ptr: "); uart.printnum(se_txn.rd_spi_ptr); uart.print("\n");
+				//uart.print("req_rlen: "); uart.printnum(se_txn.req_rlen); uart.print("\n");
 				//uart.print("rcv_char: "); uart.printnum((int)rcv_char); uart.print("\n");
 
 				// Check for the echo exit command
@@ -484,18 +510,29 @@ void jmt_echo(int begin) {
 				}
 				else
 					ecmd_idx = 0;
-				btxspi.rd_uart_ptr++;
+				//se_txn.rd_uart_ptr++;
 			}
 			
 			// Transmitting thru uart (sending stored write data from master device)
-			if( btxspi.wr_uart_ptr != btxspi.wr_spi_ptr ){	
-				//bt.tr( (unsigned char) wr_buf[btxspi.wr_uart_ptr] );
-				
-				/*uart.print("wr_uart_ptr: "); uart.printnum(btxspi.wr_uart_ptr); uart.print("\r\n");
-				uart.print("wr_spi_ptr: "); uart.printnum(btxspi.wr_spi_ptr); uart.print("\r\n");
-				uart.print("req_wlen: "); uart.printnum(btxspi.req_wlen); uart.print("\r\n");
+			//if( se_txn.wr_uart_ptr != se_txn.wr_spi_ptr )
+			if( spi_din_fifo.available() )
+			{
+				//bt.tr( (unsigned char) wr_buf[se_txn.wr_uart_ptr] );
+				// Setup a transmit of blen bytes
+
+				unsigned int blen = spi_din_fifo.available();
+				wiface.tr_setup( blen );
+				for( unsigned int i = 0; i < blen; blen++ )
+				{
+					wiface.tr( spi_din_fifo.pop() );
+				}
+
+				/*uart.print("wr_uart_ptr: "); uart.printnum(se_txn.wr_uart_ptr); uart.print("\r\n");
+				uart.print("wr_spi_ptr: "); uart.printnum(se_txn.wr_spi_ptr); uart.print("\r\n");
+				uart.print("req_wlen: "); uart.printnum(se_txn.req_wlen); uart.print("\r\n");
 				*/
-				btxspi.wr_uart_ptr++;
+				
+				//se_txn.wr_uart_ptr++;
 			}
 		
 		}
@@ -554,26 +591,54 @@ void jmt_eesave(bool enable)
 //
 void MY_SPI_STC_FUNC()
 {
-	// New cmd
-	if( btxspi.cmd == 0 ) 
+	// Phase 0 (start new cmd)
+	// cmd[7] = read
+	// cmd[6] = write
+	// cmd[5:0] = xxxxxx
+	//-----------------------
+	// Desc: Recv command byte, provide byte count of available read data for master (queued for next byte)
+	// In:   cmd_byte[0],
+	// Out:  xxxxxxxx[0], rdata_count[1]
+	if( se_txn.cmd == 0 ) 
 	{
-		btxspi.cmd = (SPDR & 0xC0);
-		SPDR = (btxspi.rd_uart_ptr - btxspi.rd_spi_ptr); // Read data count
+		se_txn.cmd = (SPDR & 0xC0);
+		//SPDR = (se_txn.rd_uart_ptr - se_txn.rd_spi_ptr); // Read data count
+		SPDR = uint8_t( 0xff & spi_dout_fifo.available() );
 	}
-	else if( btxspi.cmd & 0xC0 ) 
+	// Phase 1
+	//-----------------------
+	// Desc: Recv write length request, provide byte count of available write space for master
+	// In:      req_wlen[1],
+	// Out:  rdata_count[1], wdata_count[2]
+	else if( se_txn.cmd & 0xC0 ) 
 	{
-		btxspi.cmd = (btxspi.cmd >> 2);
-		btxspi.req_wlen = SPDR;
-		SPDR = (btxspi.wr_spi_ptr - btxspi.wr_uart_ptr);				 // Write data count	
+		se_txn.cmd = (se_txn.cmd >> 2);
+		se_txn.req_wlen = SPDR;
+		//SPDR = (se_txn.wr_spi_ptr - se_txn.wr_uart_ptr); // Write data count	
+		SPDR = uint8_t( 0xff & spi_din_fifo.available() );
 	}
-	else if( btxspi.cmd & 0x30 ) 
+	// Phase 2
+	//-----------------------
+	// Desc: Recv read length request,
+	// In:      req_rlen[2],
+	// Out:  wdata_count[2], read_byte0[3] (if req_rlen>0, else 0x00)
+	else if( se_txn.cmd & 0x30 ) 
 	{
-		btxspi.cmd = (btxspi.cmd >> 4);
-		btxspi.req_rlen 	 = SPDR;
-		if( btxspi.req_rlen > uint8_t(btxspi.rd_uart_ptr - btxspi.rd_spi_ptr))
-			btxspi.req_rlen = uint8_t(btxspi.rd_uart_ptr - btxspi.rd_spi_ptr);
-		if( btxspi.req_wlen == 0 ) btxspi.cmd &= (~0x1);
-		if( btxspi.req_rlen == 0 ) btxspi.cmd &= (~0x2);
+		se_txn.cmd = (se_txn.cmd >> 4);
+		se_txn.req_rlen = SPDR;
+		// may just comment this out
+		//if( se_txn.req_rlen > uint8_t(se_txn.rd_uart_ptr - se_txn.rd_spi_ptr) )
+		//{
+		//	se_txn.req_rlen = uint8_t(se_txn.rd_uart_ptr - se_txn.rd_spi_ptr);
+		//}
+		// Mask off read/write bits if requested lengths are zero
+		if( se_txn.req_wlen == 0 ) se_txn.cmd &= (~0x1);
+
+		if( se_txn.req_rlen == 0 )
+		{
+			se_txn.cmd &= (~0x2);
+			SPDR = 0x00;
+		}
 		else
 		{
 			spi_echo_rd_reply();
@@ -582,23 +647,31 @@ void MY_SPI_STC_FUNC()
 	else
 	{
 		// Read (being read)
-		if( btxspi.cmd & 0x2 )
+		if( se_txn.cmd & 0x2 )
 		{
 			spi_echo_rd_reply();
 		}
-		else // Send zero if done reading
-			SPDR = 0x00;
-	
-		//Write (being written to)
-		if( btxspi.cmd & 0x1 )
+		// Send zero if done reading
+		else
 		{
-			rbuf[WR_BUF_IDX + btxspi.wr_spi_ptr] = SPDR;	
-			btxspi.wr_spi_ptr += ((btxspi.wr_spi_ptr+1) == btxspi.wr_uart_ptr) ? 0 : 1;
-			if( btxspi.req_wlen != 0 ) btxspi.req_wlen--; 
-			btxspi.cmd &= (btxspi.req_wlen == 0) ? (~0x1) : 0xff;
+			SPDR = 0x00;
+		}
+
+		//Write (being written to)
+		if( se_txn.cmd & 0x1 )
+		{
+			//rbuf[WR_BUF_IDX + se_txn.wr_spi_ptr] = SPDR;	
+			//se_txn.wr_spi_ptr += ((se_txn.wr_spi_ptr+1) == se_txn.wr_uart_ptr) ? 0 : 1;
+			spi_din_fifo.push( SPDR );
+
+			if( se_txn.req_wlen != 0 ) se_txn.req_wlen--;
+			// Clear write bit if all data has been written master
+			se_txn.cmd &= (se_txn.req_wlen == 0) ? (~0x1) : 0xff;
 		}
 		else // Discard data if done reading 
+		{
 			SPDR;
+		}
 		
 	}
 
@@ -607,10 +680,13 @@ void MY_SPI_STC_FUNC()
 
 void spi_echo_rd_reply()
 {
-			SPDR = rbuf[btxspi.rd_spi_ptr];
-			btxspi.rd_spi_ptr += (btxspi.rd_spi_ptr == btxspi.rd_uart_ptr) ? 0 : 1; // Prevent spi ptr from passing uart ptr
-			btxspi.req_rlen--;
-			btxspi.cmd &= (btxspi.req_rlen==0) ? (~0x2) : 0xff;
+	//SPDR = rbuf[se_txn.rd_spi_ptr];
+	// Prevent spi ptr from passing uart ptr
+	//se_txn.rd_spi_ptr += (se_txn.rd_spi_ptr == se_txn.rd_uart_ptr) ? 0 : 1;
+	SPDR = spi_dout_fifo.pop();
+	se_txn.req_rlen--;
+	// Clear read bit if all data has been read by master
+	se_txn.cmd &= (se_txn.req_rlen==0) ? (~0x2) : 0xff;
 
 }
 //************
