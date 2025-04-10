@@ -14,6 +14,7 @@ extern int debug;
 #include "myIO.h"
 #include "atmega328_pgm.h"
 #include "uartxspi.h"
+#include "myFifo.h"
 
 //==============================
 // Macros
