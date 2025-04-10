@@ -4,7 +4,7 @@ MCU=atmega328
 
 #TARGET=btprogrammer
 TARGET=jmtprogrammer
-WIFACE=bt
+WIFACE=wifi
 SRC_DIR=../src
 IFACE_DIR=$(SRC_DIR)/interfaces
 MYAVR_SRC_DIR=$(MYAVRLIB_PATH)/src/$(MCU)
@@ -16,6 +16,7 @@ INCLUDES= $(MYAVRLIB_PATH)/include/$(MCU)
 
 # Source files used from AVR lib
 MYAVR_SRCS=	mystdlib.cpp \
+			myFifo.cpp \
 			myUART.cpp \
 			mySPI.cpp \
 			myTimer.cpp \
